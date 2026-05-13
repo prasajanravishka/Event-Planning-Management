@@ -1,0 +1,89 @@
+/* styles.css */
+body {
+  margin-top: 12 0px;
+  font-family: Arial, sans-serif;
+  display: flex;
+  height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.container {
+  display: flex;
+  width: 100%;
+  height: 1000px;
+}
+
+.form-section {
+  flex: 1;
+  padding: 20px;
+  background-color: white;
+  display: flex;
+  justify-content: flex-start;
+  width: 400px;
+}
+
+.logo img {
+  width: 150px;
+  margin-bottom: 20px;
+}
+
+.booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 400px;
+}
+
+.booking-form label {
+  font-size: 14px;
+  color: #555;
+}
+
+.booking-form input,
+.booking-form select,
+.booking-form textarea {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.booking-form textarea {
+  resize: none;
+  height: 60px;
+}
+
+.booking-form .terms {
+  font-size: 12px;
+  color: #999;
+}
+
+.booking-form .terms a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.booking-form .book-btn {
+  width: 100%;
+  padding: 15px;
+  background-color: #ff5722;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.booking-form .book-btn:hover {
+  background-color: #e64a19;
+}
+
+.image-section {
+  flex: 1;
+  background: url('dj-event.jpg') no-repeat center center / cover;
+  background-size: cover;
+  height: 1000px;
+  width: auto;
+ 
+}

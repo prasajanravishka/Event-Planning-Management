@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-image: url(festive-young-friends-having-fun-with-confetti.jpg);
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  
+  .container {
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .title {
+    font-size: 60px;
+    margin-bottom: 50px;
+    font-weight: bold;
+    
+  }
+  h1{
+    color: white;
+  }
+  
+  .cards {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+  }
+  
+  .card {
+    background-color: #a7cc91; /* Bright green background */
+    color: black;
+    padding: 20px;
+    width: 400px;
+    text-align: left;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card h2 {
+    margin-top: 0;
+  }
+  
+  .card p {
+    margin: 0;
+    line-height: 1.5;
+  }
+  

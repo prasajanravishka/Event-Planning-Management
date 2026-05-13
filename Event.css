@@ -1,0 +1,26 @@
+/* Additional CSS for button alignment */
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+.button-container button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.button-container button[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+}
+.button-container button[type="submit"]:hover {
+    background-color: #45a049;
+}
+.button-container button[type="reset"] {
+    background-color: #f44336;
+    color: white;
+}
+.button-container button[type="reset"]:hover {
+    background-color: #d32f2f;
+}
