@@ -1,56 +1,74 @@
-# Event Planing Project (EventEase)
+# EventEase - Event Planning & Management Platform
 
-A PHP (XAMPP) based event planning website that lets you browse event categories (Hotels, Weddings, DJ Parties, Birthdays, Get Together), book events, calculate/save food & beverage budgets, and view organizer/admin dashboards.
-
-## Project Structure (main pages)
-- **Home.php** – Landing page with links to event categories.
-- **navbar.php** – Common navigation bar included by pages.
-- **AboutUs.php** – Mission/vision/achievement section.
-- **Booking.php** – Booking form that inserts booking data into MySQL.
-- **Food.php** – Food & beverage budget calculator (and saves results into DB).
-- **FoodBudsummary.php** – Budget summary page (accessible from admin/summary).
-- **Summary.php** – Simple dashboard menu (User, Booking, Budget Summary).
-- **Userlist.php** – Lists registered users and supports “Download PDF”.
-- **Admin.php** / **AdminRegistation.php** – Admin login/registration.
-
-## Tech Stack
-- **Backend:** PHP
-- **Frontend:** HTML/CSS (page-specific CSS like `Home.css`, `Booking.css`, `Food.css`, etc.)
-- **Database:** MySQL via **mysqli**
-- **Dependencies:**
-  - Uses `html2pdf.bundle.js` in **Userlist.php** for PDF export.
-
-## Database Requirements
-The code expects a MySQL database named **`login`** on `localhost` with user `root` (empty password by default in code).
-
-### Tables referenced in current code
-- **`users`** (used by `Login.php` and `Userlist.php`)
-- **`admin`** (used by `Admin.php`)
-- **`bookings`** (used by `Booking.php`)
-- **`budgets`** (used by `Food.php`)
-
-> Note: You must create these tables (and columns) according to what the PHP files expect.
-
-## How to Run
-1. Start **XAMPP**.
-2. Ensure MySQL is running.
-3. Put this project in your XAMPP **htdocs** folder (already assumed by path).
-4. Open the project in browser:
-   - Example: `http://localhost/Event%20Planing%20Project/Home.php`
-
-## Navigation / Main User Flows
-- **Browse categories:** Home → HotelSlide / WeddingsSlids / DjPartySlide / BirthdayList / GetTogether
-- **Client booking:** Home → Booking → Booking data saved to `bookings`
-- **Budget calculation:** Booking → Food calculator (`Food.php`) → calculates totals and can save to `budgets`
-- **Admin/Organizer dashboard:** Admin login → Summary menu → Userlist / Bookinglist / FoodBudsummary
-
-## Notes / Potential Issues
-- Some pages reference other filenames with different casing (e.g., `LogIn.php` vs `Login.php`)—ensure links match actual filenames.
-- `Booking.php` echoes results and expects specific POST field names.
-- `Food.php` outputs a “Connected to database successfully!” message in normal execution.
-
-## Screenshots / Assets
-The project includes many images (e.g., `logo.jpg`, `wedding.jpg`, `birth.jpg`, etc.) which are referenced directly in the pages.
+EventEase is a premium, fully responsive event planning and management platform. Re-architected with a modern, light-theme **glassmorphism** design system, it provides seamless client-to-organizer workflows for booking hotels, weddings, DJ parties, birthdays, and get-togethers.
 
 ---
-If you want, I can also generate a **full database schema** (CREATE TABLE scripts) by extracting the expected columns from the PHP files in this repo.
+
+## Key Modules & Features
+
+* 🌟 **Responsive Alternating Services**: An aligned, alternating service row selector featuring zoom hover animations and details.
+* 💳 **Catering & Food Calculator**: Estimate catering, dessert, and beverage expenses dynamically. Calculations are processed, summarized, and logged in real-time.
+* 🔐 **Secure Booking Mechanism**: Generates secure tracking Booking IDs for scheduling events, places, and guest limits. Requires client authentication.
+* 📊 **Organizer Control Panel**: Access client records, user credentials, booking logs, and food expense tables.
+* 📥 **Interactive Reports**: Client bookings, user registrations, and budget logs support instant, premium landscape PDF export.
+* ✉️ **Inquiry Logging**: A quick contact message form integrated directly onto pages that stores submissions securely.
+
+---
+
+## Directory Structure
+
+```
+├── config/
+│   └── database.php          # Central database connection parameters
+├── includes/
+│   └── navbar.php            # Floating glassmorphic header widget
+├── public/
+│   ├── assets/
+│   │   ├── css/
+│   │   │   └── global.css    # Central Design System (Light glassmorphism)
+│   │   └── images/           # Asset images and logos
+│   ├── admin/
+│   │   ├── Admin.php         # Organizer login
+│   │   ├── Userlist.php      # User table grid (PDF export)
+│   │   ├── Bookinglist.php   # Master booking grid (PDF export)
+│   │   └── ...
+│   ├── events/
+│   │   ├── FoodBudsummary.php# Budget logs (PDF export)
+│   │   └── ...
+│   ├── Home.php              # Rebuilt interactive landing page
+│   ├── Booking.php           # Protected client booking form
+│   ├── Food.php              # Food calculator report sheet
+│   └── ...
+├── tests/                    # Testing scripts (haa.php, heee.php, n.php)
+└── database.sql              # MySQL database structure schema
+```
+
+---
+
+## Database Configuration
+The system connects to a local MySQL instance with the following settings:
+- **Database Name**: `event_planning_management`
+- **Port**: `3306` (standard)
+- **Authentication**: `root` with empty password `""` (default XAMPP/WAMP settings).
+
+To setup the database, import the `database.sql` file into your MySQL database server via **phpMyAdmin**.
+
+---
+
+## Setup & Running Locally
+
+1. Make sure you have **PHP** (8.1+) and **MySQL/XAMPP** running.
+2. Clone the repository into your local directory.
+3. Start the PHP local development server from the root directory:
+   ```bash
+   php -S localhost:8000 -t public
+   ```
+4. Access the homepage at: **[http://localhost:8000/Home.php](http://localhost:8000/Home.php)**
+
+---
+
+## Organizer Access
+To test coordinator functionalities:
+1. Register an administrator account at: `http://localhost:8000/admin/AdminRegistation.php`
+2. Log in at: `http://localhost:8000/admin/Admin.php`
+3. Access the console at: `http://localhost:8000/Summary.php`
