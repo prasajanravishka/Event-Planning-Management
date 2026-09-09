@@ -123,7 +123,7 @@
     <div class="header">
         <h1>Welcome to Event Ease</h1>
         <p class="description">
-            Our all-in-one event planning management system! Streamline your event planning process with our intuitive platform designed to help you organize, manage, and execute events of any size with ease. From creating detailed schedules and managing guest lists to coordinating vendors and tracking budgets, EventEase empowers you to plan with confidence.
+            Our all-in-one event planning management system! Streamline your event planning process with our intuitive platform designed to help you organize, manage, and execute events of any size with ease. From creating detailed schedules and managing guest lists to coordinating vendors and tracking budgets, EVENTFLARE empowers you to plan with confidence.
         </p>
     </div>
 </body>

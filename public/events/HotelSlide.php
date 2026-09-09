@@ -6,7 +6,7 @@ include __DIR__ . '/../../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luxury Hotels & Venues - EventEase</title>
+    <title>Luxury Hotels & Venues - EVENTFLARE</title>
     <style>
         .slide-container {
             max-width: 900px;

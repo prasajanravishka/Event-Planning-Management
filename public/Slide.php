@@ -11,7 +11,7 @@ include __DIR__ . '/../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - EventEase</title>
+    <title>Dashboard - EVENTFLARE</title>
     <style>
         .dashboard-container {
             max-width: 1000px;
@@ -184,7 +184,7 @@ include __DIR__ . '/../includes/navbar.php';
                     </div>
                 </a>
 
-                <a href="admin/BookinglistClient.php" class="action-card">
+                <a href="MyBookings.php" class="action-card">
                     <div class="action-icon">
                         <i class="fas fa-list-ul"></i>
                     </div>

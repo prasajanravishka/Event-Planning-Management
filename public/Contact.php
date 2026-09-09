@@ -40,7 +40,7 @@ include __DIR__ . '/../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact Us - EventEase</title>
+    <title>Contact Us - EVENTFLARE</title>
     <style>
         .contact-wrapper {
             max-width: 1000px;
@@ -163,7 +163,7 @@ include __DIR__ . '/../includes/navbar.php';
                 </div>
                 <div class="info-text">
                     <h3>Email Address</h3>
-                    <p>support@eventease.com<br>Response within 24 hours</p>
+                    <p>support@eventflare.com<br>Response within 24 hours</p>
                 </div>
             </div>
         </div>

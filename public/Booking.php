@@ -10,19 +10,23 @@ $success_message = "";
 $error_message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $user_name = $_POST['user_name'] ?? '';
-    $eventType = $_POST['EventType'] ?? '';
-    $place = $_POST['Place'] ?? '';
+    // Use trim only — htmlspecialchars applied on output, not storage
+    $user_name = trim($_POST['user_name'] ?? '');
+    $eventType = trim($_POST['EventType'] ?? '');
+    $place = trim($_POST['Place'] ?? '');
     $numberOfGuests = intval($_POST['NumberOfGuests'] ?? 0);
-    $eventDate = $_POST['EventDate'] ?? '';
-    $dayNight = $_POST['DayNight'] ?? '';
-    $foodPreferences = $_POST['FoodPreferences'] ?? '';
-    $extraDetails = $_POST['ExtraDetails'] ?? '';
+    $eventDate = trim($_POST['EventDate'] ?? '');
+    $dayNight = trim($_POST['DayNight'] ?? '');
+    $foodPreferences = trim($_POST['FoodPreferences'] ?? '');
+    $extraDetails = trim($_POST['ExtraDetails'] ?? '');
 
     if (empty($user_name)) {
         $error_message = "User Name is required.";
+    } elseif (!empty($eventDate) && strtotime($eventDate) < strtotime('today')) {
+        $error_message = "Event date must be today or in the future.";
     } else {
-        $bookingID = "BKG" . time(); 
+        // Use uniqid to prevent collision (time-based IDs collide within the same second)
+        $bookingID = "BKG" . strtoupper(uniqid());
         
         $stmt = $conn->prepare("INSERT INTO bookings (BookingID, user_name, EventType, Place, NumberOfGuests, EventDate, DayNight, FoodPreferences, ExtraDetails) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
@@ -30,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->bind_param("sssisssss", $bookingID, $user_name, $eventType, $place, $numberOfGuests, $eventDate, $dayNight, $foodPreferences, $extraDetails);
             
             if ($stmt->execute()) {
-                $success_message = "Booking successfully created! Your Booking ID is <strong>$bookingID</strong>";
+                $success_message = "Booking successfully created! Your Booking ID is <strong>" . htmlspecialchars($bookingID) . "</strong>";
             } else {
                 $error_message = "Error: " . $stmt->error;
             }
@@ -40,7 +44,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 }
-$conn->close();
+
+// Fetch event types purely from database for dropdown
+$event_types_result = $conn->query("SELECT type_name FROM event_types WHERE is_active = 1 ORDER BY event_type_id");
+$event_types = [];
+if ($event_types_result) {
+    while ($et = $event_types_result->fetch_assoc()) {
+        $event_types[] = $et['type_name'];
+    }
+}
+
+// Support URL parameters for pre-selection (e.g. from Wedding Plan page or packages)
+$pre_event   = trim($_GET['event'] ?? '');
+$pre_venue   = trim($_GET['venue'] ?? '');
+$pre_guests  = intval($_GET['guests'] ?? 0);
+$pre_package = trim($_GET['package'] ?? '');
+$pre_details = trim($_GET['details'] ?? '');
+if (!empty($pre_package) && empty($pre_details)) {
+    $pre_details = "Interested in Package: " . $pre_package;
+}
 
 include __DIR__ . '/../includes/navbar.php';
 ?>
@@ -49,7 +71,7 @@ include __DIR__ . '/../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book Your Event - EventEase</title>
+    <title>Book Your Event - EVENTFLARE</title>
     <style>
         .booking-wrapper {
             max-width: 1100px;
@@ -166,6 +188,48 @@ include __DIR__ . '/../includes/navbar.php';
                 </div>
             <?php endif; ?>
 
+            <?php if (strcasecmp($pre_event, 'Weddings') === 0): ?>
+                <div style="background:linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(236, 72, 153, 0.1)); border:1px solid rgba(139, 92, 246, 0.3); border-radius:14px; padding:18px 20px; margin-bottom:25px; display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap;">
+                    <div>
+                        <strong style="color:var(--primary); font-size:14px; display:block; margin-bottom:3px;"><i class="fas fa-gem"></i> Planning a Wedding?</strong>
+                        <span style="font-size:13px; color:var(--text-muted);">Try our specialized 4-stage Wedding Wizard to browse and handpick your caterers, florists, and cinematographers with live cost estimation!</span>
+                    </div>
+                    <a href="events/WeddingBooking.php" class="btn btn-primary" style="padding:8px 18px; font-size:13px; white-space:nowrap;">
+                        Launch Wedding Wizard <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            <?php elseif (stripos($pre_event, 'DJ') !== false || stripos($pre_event, 'Party') !== false): ?>
+                <div style="background:linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.08)); border:1px solid rgba(139, 92, 246, 0.3); border-radius:14px; padding:18px 20px; margin-bottom:25px; display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap;">
+                    <div>
+                        <strong style="color:var(--primary); font-size:14px; display:block; margin-bottom:3px;"><i class="fas fa-bolt"></i> Planning a DJ & Party Event?</strong>
+                        <span style="font-size:13px; color:var(--text-muted);">Try our specialized 4-stage DJ Party Wizard to select lighting rigs, pro DJs, and mobile cocktail bars with live pricing!</span>
+                    </div>
+                    <a href="events/PartyBooking.php" class="btn btn-primary" style="padding:8px 18px; font-size:13px; white-space:nowrap;">
+                        Launch DJ Party Wizard <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            <?php elseif (stripos($pre_event, 'Birth') !== false): ?>
+                <div style="background:linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(139, 92, 246, 0.08)); border:1px solid rgba(236, 72, 153, 0.3); border-radius:14px; padding:18px 20px; margin-bottom:25px; display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap;">
+                    <div>
+                        <strong style="color:#db2777; font-size:14px; display:block; margin-bottom:3px;"><i class="fas fa-birthday-cake"></i> Planning a Birthday?</strong>
+                        <span style="font-size:13px; color:var(--text-muted);">Try our specialized 4-stage Birthday Wizard to choose custom 3D cakes, themed balloon backdrops, and magicians!</span>
+                    </div>
+                    <a href="events/BirthdayBooking.php" class="btn btn-primary" style="background:#db2777; border-color:#db2777; padding:8px 18px; font-size:13px; white-space:nowrap;">
+                        Launch Birthday Wizard <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            <?php elseif (stripos($pre_event, 'Together') !== false || stripos($pre_event, 'Reunion') !== false): ?>
+                <div style="background:linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(139, 92, 246, 0.08)); border:1px solid rgba(16, 185, 129, 0.3); border-radius:14px; padding:18px 20px; margin-bottom:25px; display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap;">
+                    <div>
+                        <strong style="color:#10b981; font-size:14px; display:block; margin-bottom:3px;"><i class="fas fa-handshake"></i> Planning a Get Together or Reunion?</strong>
+                        <span style="font-size:13px; color:var(--text-muted);">Try our specialized 4-stage Reunion Wizard to handpick live BBQ grills, marquee tents, and acoustic sing-along acts!</span>
+                    </div>
+                    <a href="events/GetTogetherBooking.php" class="btn btn-primary" style="background:#10b981; border-color:#10b981; padding:8px 18px; font-size:13px; white-space:nowrap;">
+                        Launch Reunion Wizard <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            <?php endif; ?>
+
             <form class="booking-form" method="post" action="Booking.php">
                 <div class="form-group full-width">
                     <label class="form-label" for="user_name">Customer Username</label>
@@ -177,22 +241,22 @@ include __DIR__ . '/../includes/navbar.php';
                     <label class="form-label" for="EventType">Event Type</label>
                     <select id="EventType" class="form-input" name="EventType" required>
                         <option value="">Select category</option>
-                        <option value="Wedding">Wedding</option>
-                        <option value="Party">Party</option>
-                        <option value="Hotel Venue">Hotel Venue</option>
-                        <option value="Birthday">Birthday</option>
-                        <option value="Get Together">Get Together</option>
+                        <?php foreach ($event_types as $type): ?>
+                            <option value="<?= htmlspecialchars($type) ?>" <?= (strcasecmp($pre_event, $type) === 0) ? 'selected' : '' ?>><?= htmlspecialchars($type) ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="Place">Venue Location</label>
-                    <input type="text" id="Place" class="form-input" placeholder="City or Hotel Name" name="Place" required>
+                    <input type="text" id="Place" class="form-input" placeholder="City or Hotel Name" name="Place" 
+                           value="<?= !empty($pre_venue) ? htmlspecialchars($pre_venue) : '' ?>" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="NumberOfGuests">Expected Guests</label>
-                    <input type="number" id="NumberOfGuests" class="form-input" placeholder="0" name="NumberOfGuests" min="1" required>
+                    <input type="number" id="NumberOfGuests" class="form-input" placeholder="0" name="NumberOfGuests" min="1" 
+                           value="<?= ($pre_guests > 0) ? htmlspecialchars($pre_guests) : '' ?>" required>
                 </div>
                 
                 <div class="form-group">
@@ -224,7 +288,7 @@ include __DIR__ . '/../includes/navbar.php';
 
                 <div class="form-group full-width">
                     <label class="form-label" for="details">Special Instructions & Details</label>
-                    <textarea id="details" class="form-input" style="height:100px; resize:none;" name="ExtraDetails" placeholder="Add extra requirements..."></textarea>
+                    <textarea id="details" class="form-input" style="height:100px; resize:none;" name="ExtraDetails" placeholder="Add extra requirements..."><?= !empty($pre_details) ? htmlspecialchars($pre_details) : '' ?></textarea>
                 </div>
                 
                 <div class="submit-btn-container full-width">
@@ -238,5 +302,6 @@ include __DIR__ . '/../includes/navbar.php';
             <p>From private birthday parties to grand wedding receptions, we handle all logistics. Our platform keeps your scheduling, budget metrics, and coordinator connection completely streamlined.</p>
         </div>
     </div>
+<?php $conn->close(); ?>
 </body>
 </html>

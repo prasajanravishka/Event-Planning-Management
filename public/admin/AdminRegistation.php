@@ -1,5 +1,10 @@
 <?php 
 session_start();
+// Only existing admins can register new admin accounts
+if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
+    header("Location: Admin.php");
+    exit();
+}
 include __DIR__ . '/../../config/database.php';  
 
 $error = "";
@@ -58,7 +63,7 @@ include __DIR__ . '/../../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Organizer Register - EventEase</title>
+    <title>Organizer Register - EVENTFLARE</title>
     <style>
         .auth-wrapper {
             display: flex;

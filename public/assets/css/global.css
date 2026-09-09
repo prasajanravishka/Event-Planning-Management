@@ -35,7 +35,7 @@
     box-sizing: border-box;
 }
 
-body {
+html, body {
     background: var(--bg-main);
     background-color: var(--bg-darker);
     color: var(--text-main);

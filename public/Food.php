@@ -64,7 +64,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 }
-$conn->close();
 
 include __DIR__ . '/../includes/navbar.php';
 ?>
@@ -73,7 +72,7 @@ include __DIR__ . '/../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Food Budget Calculator - EventEase</title>
+    <title>Food Budget Calculator - EVENTFLARE</title>
     <style>
         .calculator-wrapper {
             max-width: 900px;
@@ -305,5 +304,6 @@ include __DIR__ . '/../includes/navbar.php';
             </div>
         </div>
     </div>
+<?php $conn->close(); ?>
 </body>
 </html>

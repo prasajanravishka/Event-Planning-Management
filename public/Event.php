@@ -47,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
     }
     $check_stmt->close();
 }
-$conn->close();
+
 
 include __DIR__ . '/../includes/navbar.php';
 ?>
@@ -56,7 +56,7 @@ include __DIR__ . '/../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Booking Addons - EventEase</title>
+    <title>Manage Booking Addons - EVENTFLARE</title>
     <style>
         .event-wrapper {
             max-width: 600px;
@@ -164,5 +164,6 @@ include __DIR__ . '/../includes/navbar.php';
             </form>
         </div>
     </div>
+<?php $conn->close(); ?>
 </body>
 </html>

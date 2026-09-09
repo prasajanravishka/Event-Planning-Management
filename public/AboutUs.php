@@ -6,7 +6,7 @@ include __DIR__ . '/../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - EventEase</title>
+    <title>About Us - EVENTFLARE</title>
     <style>
         .about-wrapper {
             max-width: 1000px;

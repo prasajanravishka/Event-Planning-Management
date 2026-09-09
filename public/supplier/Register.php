@@ -1,60 +1,81 @@
-<?php
+<?php 
 session_start();
-include __DIR__ . '/../config/database.php';
+include __DIR__ . '/../../config/database.php';  
 
-$error = '';
+$error = "";
+$success_message = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($_POST['password'])) {
-    $username = trim(htmlspecialchars($_POST['username'])); 
-    $password = trim($_POST['password']);
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
+    $username = htmlspecialchars(trim($_POST['username']));
+    $full_name = htmlspecialchars(trim($_POST['fullname']));
+    $email = htmlspecialchars(trim($_POST['email']));
+    $password = $_POST['password'];
+    $confirm_password = $_POST['confirm-password'];
+    $business_name = htmlspecialchars(trim($_POST['business_name']));
+    $role = 'supplier';
 
-    if (empty($username) || empty($password)) {
-        $error = 'Username and Password are required.';
+    if (empty($username) || empty($full_name) || empty($email) || empty($password) || empty($confirm_password) || empty($business_name)) {
+        $error = "All fields are required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Invalid email format.";
+    } elseif ($password !== $confirm_password) {
+        $error = "Passwords do not match.";
     } else {
-        global $conn; 
-        if (!$conn) {
-            die("Database connection failed: " . mysqli_connect_error());
-        }
+        $sql = "SELECT id FROM users WHERE email = ?";
+        $stmt = $conn->prepare($sql);
 
-        $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        if ($stmt) {
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $stmt->store_result();
 
-        if ($result->num_rows == 1) {
-            $row = $result->fetch_assoc();
-            if (password_verify($password, $row['password'])) {
-                $_SESSION['login_user'] = $username;
-                $_SESSION['user_role'] = $row['role'] ?? 'buyer';
-                
-                if ($username === 'admin' || ($_SESSION['user_role'] ?? '') === 'admin') {
-                    $_SESSION['user_type'] = 'admin';
-                    $_SESSION['admin_last_activity'] = time();
-                    header("location: admin/Dashboard.php");
-                } elseif ($_SESSION['user_role'] === 'supplier') {
-                    header("location: supplier/Dashboard.php");
-                } else {
-                    header("location: Slide.php"); 
-                }
-                exit();
+            if ($stmt->num_rows > 0) {
+                $error = "An account with this email already exists.";
             } else {
-                $error = 'Incorrect password!';
+                $conn->begin_transaction();
+                try {
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $sql_user = "INSERT INTO users (username, fullname, email, password, role) VALUES (?, ?, ?, ?, ?)";
+                    $stmt_user = $conn->prepare($sql_user);
+                    $stmt_user->bind_param("sssss", $username, $full_name, $email, $hashed_password, $role);
+                    
+                    if (!$stmt_user->execute()) {
+                        throw new Exception("Error inserting user: " . $stmt_user->error);
+                    }
+                    
+                    $user_id = $conn->insert_id;
+                    
+                    $category = ""; // Empty string since it was removed from the form but NOT NULL in DB
+                    $sql_supp = "INSERT INTO suppliers (user_id, business_name, category) VALUES (?, ?, ?)";
+                    $stmt_supp = $conn->prepare($sql_supp);
+                    $stmt_supp->bind_param("iss", $user_id, $business_name, $category);
+                    
+                    if (!$stmt_supp->execute()) {
+                        throw new Exception("Error inserting supplier: " . $stmt_supp->error);
+                    }
+                    
+                    $conn->commit();
+                    $success_message = "Business Registration successful! You can now sign in.";
+                    
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    $error = "Registration failed: " . $e->getMessage();
+                }
             }
+            $stmt->close();
         } else {
-            $error = 'Invalid username!';
+            $error = "Database error: " . $conn->error;
         }
-        $stmt->close();
-        $conn->close();
     }
 }
-include __DIR__ . '/../includes/navbar.php';
+include __DIR__ . '/../../includes/navbar.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - EVENTFLARE</title>
+    <title>Supplier Sign Up - EVENTFLARE</title>
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <style>
         /* Base Reset */
@@ -86,7 +107,7 @@ include __DIR__ . '/../includes/navbar.php';
         /* Left Side: Branding / Image */
         .brand-side {
             position: relative;
-            background-image: url('assets/images/signin_bg.jpg');
+            background-image: url('../assets/images/signin_bg.jpg');
             background-size: cover;
             background-position: center;
             display: flex;
@@ -145,8 +166,8 @@ include __DIR__ . '/../includes/navbar.php';
 
         .auth-card {
             width: 100%;
-            max-width: 420px;
-            padding: 50px 40px;
+            max-width: 450px;
+            padding: 40px;
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
             border-radius: 24px;
@@ -158,9 +179,9 @@ include __DIR__ . '/../includes/navbar.php';
         }
 
         .auth-card h1 {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 800;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             color: var(--text-heading);
             text-align: center;
         }
@@ -191,7 +212,7 @@ include __DIR__ . '/../includes/navbar.php';
         /* Floating Label Inputs */
         .input-group {
             position: relative;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .input-group i {
@@ -206,11 +227,11 @@ include __DIR__ . '/../includes/navbar.php';
 
         .form-input {
             width: 100%;
-            padding: 16px 45px 16px 20px;
+            padding: 14px 45px 14px 20px;
             background: #ffffff;
             border: 2px solid #e2e8f0;
             border-radius: 12px;
-            font-size: 15px;
+            font-size: 14px;
             color: var(--text-main);
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
@@ -226,46 +247,48 @@ include __DIR__ . '/../includes/navbar.php';
             color: var(--primary);
         }
 
-        /* Utilities */
-        .remember-forget {
+        /* Role Selector */
+        .role-selector {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .role-option {
+            flex: 1;
+            position: relative;
+        }
+
+        .role-option input {
+            display: none;
+        }
+
+        .role-label {
+            display: block;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
             font-size: 14px;
             color: var(--text-muted);
-            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            background: #ffffff;
         }
 
-        .remember-forget label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-
-        .remember-forget input[type="checkbox"] {
-            accent-color: var(--primary);
-            width: 16px;
-            height: 16px;
-        }
-
-        .remember-forget a {
+        .role-option input:checked + .role-label {
+            border-color: var(--primary);
             color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .remember-forget a:hover {
-            text-decoration: underline;
+            background: rgba(139, 92, 246, 0.05);
         }
 
         .submit-btn {
             width: 100%;
-            padding: 16px;
+            padding: 14px;
             font-size: 16px;
             font-weight: 700;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             border-radius: 12px;
             background: var(--primary);
             color: white;
@@ -292,9 +315,7 @@ include __DIR__ . '/../includes/navbar.php';
             text-decoration: none;
         }
 
-        .message-error {
-            background: #fee2e2;
-            color: #dc2626;
+        .message {
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 20px;
@@ -302,6 +323,16 @@ include __DIR__ . '/../includes/navbar.php';
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+        
+        .message-error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .message-success {
+            background: #dcfce7;
+            color: #16a34a;
         }
 
         /* Responsive Mobile Stacking */
@@ -332,43 +363,67 @@ include __DIR__ . '/../includes/navbar.php';
             <div class="brand-overlay"></div>
             <div class="brand-content">
                 <div class="brand-logo">EVENTFLARE</div>
-                <p class="brand-subtitle">The ultimate broker platform linking premium clients with elite event suppliers.</p>
+                <p class="brand-subtitle">Partner with us. The ultimate broker platform linking premium clients with elite event suppliers.</p>
             </div>
         </div>
 
         <!-- Right Side Form -->
         <div class="form-side">
             <div class="auth-card">
-                <form action="Login.php" method="POST">
-                    <h1>Sign In</h1>
+                <form action="Register.php" method="POST">
+                    <div class="auth-header">
+                        <h1>Become a Partner</h1>
+                        <p>Register your business on EVENTFLARE.</p>
+                    </div>
                     
-                    <!-- Display error message -->
                     <?php if (!empty($error)): ?>
                         <div class="message message-error">
-                            <i class="bx bx-error-circle"></i>
+                            <i class='bx bx-error-circle'></i>
                             <?= htmlspecialchars($error); ?>
                         </div>
                     <?php endif; ?>
                     
+                    <?php if (!empty($success_message)): ?>
+                        <div class="message message-success">
+                            <i class='bx bx-check-circle'></i>
+                            <?= htmlspecialchars($success_message); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="input-group">
+                        <input type="text" class="form-input" name="fullname" placeholder="Full Name" required>
+                        <i class='bx bxs-user-detail'></i>
+                    </div>
+
                     <div class="input-group">
                         <input type="text" class="form-input" name="username" placeholder="Username" required>
                         <i class='bx bxs-user'></i>             
+                    </div>
+
+                    <div class="input-group">
+                        <input type="email" class="form-input" name="email" placeholder="Business Email" required>
+                        <i class='bx bx-envelope'></i>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" class="form-input" name="business_name" placeholder="Business Name" required>
+                        <i class='bx bx-buildings'></i>
                     </div>
                     
                     <div class="input-group">
                         <input type="password" class="form-input" name="password" placeholder="Password" required>
                         <i class='bx bxs-key'></i>
                     </div>
-                    
-                    <div class="remember-forget">
-                        <label><input type="checkbox"> Remember me</label>
-                        <a href="#">Forgot Password?</a>
+
+                    <div class="input-group">
+                        <input type="password" class="form-input" name="confirm-password" placeholder="Confirm Password" required>
+                        <i class='bx bxs-lock-alt'></i>
                     </div>
 
-                    <button type="submit" class="btn submit-btn">Sign In</button>
+                    <button type="submit" class="btn submit-btn" name="register">Register Business</button>
                     
                     <div class="register-link">
-                        <p>Don't have an account? <a href="RegisterForm.php">Sign Up</a></p>
+                        <p>Already a partner? <a href="../Login.php">Sign In</a></p>
                     </div>
                 </form>
             </div>

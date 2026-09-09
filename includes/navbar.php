@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // Calculate path prefix relative to the public root
 $current_uri = $_SERVER['SCRIPT_NAME'];
 $path_prefix = '';
-if (strpos($current_uri, '/admin/') !== false || strpos($current_uri, '/events/') !== false) {
+if (strpos($current_uri, '/admin/') !== false || strpos($current_uri, '/events/') !== false || strpos($current_uri, '/supplier/') !== false) {
     $path_prefix = '../';
 }
 ?>
@@ -151,7 +151,7 @@ if (strpos($current_uri, '/admin/') !== false || strpos($current_uri, '/events/'
             <div class="logo">
                 <a href="<?php echo $path_prefix; ?>Home.php">
                     <img src="<?php echo $path_prefix; ?>assets/images/logo.jpg" alt="Logo">
-                    EventEase
+                    EVENTFLARE
                 </a>
             </div>
             
@@ -166,11 +166,16 @@ if (strpos($current_uri, '/admin/') !== false || strpos($current_uri, '/events/'
                 <li><a href="<?php echo $path_prefix; ?>AboutUs.php" class="nav-link">About</a></li>
                 <li><a href="<?php echo $path_prefix; ?>Contact.php" class="nav-link">Contact</a></li>
                 <?php if (isset($_SESSION['login_user'])): ?>
-                    <li><a href="<?php echo $path_prefix; ?>admin/BookinglistClient.php" class="nav-link">My Bookings</a></li>
+                    <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'admin'): ?>
+                        <li><a href="<?php echo $path_prefix; ?>admin/Dashboard.php" class="nav-link">Admin Panel</a></li>
+                    <?php elseif (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
+                        <li><a href="<?php echo $path_prefix; ?>supplier/Dashboard.php" class="nav-link">Supplier Panel</a></li>
+                    <?php else: ?>
+                        <li><a href="<?php echo $path_prefix; ?>MyBookings.php" class="nav-link">My Bookings</a></li>
+                    <?php endif; ?>
                     <li><a href="<?php echo $path_prefix; ?>logout.php" class="nav-link btn btn-secondary" style="border-radius:30px; padding: 8px 20px; font-size: 13px;">Logout</a></li>
                 <?php else: ?>
-                    <li><a href="<?php echo $path_prefix; ?>Login.php" class="nav-link">Client Login</a></li>
-                    <li><a href="<?php echo $path_prefix; ?>admin/Admin.php" class="nav-link">Organizer Login</a></li>
+                    <li><a href="<?php echo $path_prefix; ?>Login.php" class="nav-link">Sign In</a></li>
                 <?php endif; ?>
             </ul>
         </div> 

@@ -34,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['send_message'])) {
         }
     }
 }
-$conn->close();
+
 
 include __DIR__ . '/../includes/navbar.php';
 ?>
@@ -43,7 +43,7 @@ include __DIR__ . '/../includes/navbar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EventEase - Seamless Event Planning & Management</title>
+    <title>EVENTFLARE - Seamless Event Planning & Management</title>
     <style>
         /* Ambient Background Orbs */
         .orb {
@@ -60,42 +60,175 @@ include __DIR__ . '/../includes/navbar.php';
         .orb-2 { top: 40%; right: -15%; }
         .orb-3 { bottom: 10%; left: -15%; }
 
-        /* Hero Section */
+        /* Hero Section Split Layout */
         .hero {
-            max-width: 900px;
-            margin: 80px auto 50px;
-            text-align: center;
+            max-width: 1200px;
+            margin: 80px auto 100px;
             padding: 0 20px;
             position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .hero-text {
+            text-align: left;
+            z-index: 2;
+        }
+
+        /* Premium Hero Badge */
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .hero h1 {
-            font-size: 58px;
+            font-size: 64px;
             font-weight: 800;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, var(--text-heading) 40%, var(--primary));
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, var(--text-heading) 30%, var(--primary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -0.03em;
-            line-height: 1.15;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
         }
 
         .hero p.description {
             font-size: 18px;
             color: var(--text-muted);
-            max-width: 750px;
-            margin: 0 auto 35px;
+            margin-bottom: 40px;
             line-height: 1.8;
+            max-width: 90%;
         }
 
         .hero-buttons {
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 15px;
+            margin-bottom: 40px;
         }
 
         .hero-buttons .btn {
-            min-width: 180px;
+            min-width: 160px;
+            font-size: 16px;
+            padding: 14px 28px;
+        }
+
+        /* Social Proof Avatars */
+        .social-proof {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar-group {
+            display: flex;
+        }
+
+        .avatar-group img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            margin-left: -12px;
+            object-fit: cover;
+        }
+        
+        .avatar-group img:first-child {
+            margin-left: 0;
+        }
+
+        .social-proof p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+            font-weight: 500;
+        }
+        
+        .social-proof p span {
+            font-weight: 700;
+            color: var(--text-heading);
+        }
+
+        .hero-image-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-image {
+            width: 100%;
+            height: 520px;
+            border-radius: 24px;
+            object-fit: cover;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15);
+            transition: var(--transition-smooth);
+        }
+        
+        .hero-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 25px 50px rgba(139, 92, 246, 0.25);
+        }
+
+        /* Floating Glass Card on Hero Image */
+        .hero-floating-card {
+            position: absolute;
+            bottom: -20px;
+            left: -30px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            padding: 15px 20px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            animation: float 6s ease-in-out infinite;
+            z-index: 3;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .hero-floating-card .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .hero-floating-card .text h4 {
+            font-size: 14px;
+            margin: 0;
+            color: var(--text-heading);
+        }
+
+        .hero-floating-card .text p {
+            font-size: 12px;
+            margin: 0;
+            color: var(--text-muted);
         }
 
         /* Section Styling */
@@ -489,12 +622,35 @@ include __DIR__ . '/../includes/navbar.php';
             color: var(--text-muted);
         }
 
+        @media (max-width: 1024px) {
+            .hero {
+                gap: 20px;
+            }
+            .hero h1 {
+                font-size: 48px;
+            }
+        }
+
         @media (max-width: 900px) {
             .about-section {
                 grid-template-columns: 1fr;
             }
             .about-visual {
                 height: 300px;
+            }
+            .hero {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 30px;
+            }
+            .hero-text {
+                text-align: center;
+            }
+            .hero-buttons {
+                justify-content: center;
+            }
+            .hero-image {
+                height: 400px;
             }
         }
 
@@ -607,6 +763,39 @@ include __DIR__ . '/../includes/navbar.php';
                 height: 250px;
                 order: -1; /* image on top on mobile */
             }
+            .alt-text {
+                padding: 30px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 34px;
+            }
+            .hero p.description {
+                font-size: 16px;
+            }
+            .hero-image {
+                height: 280px;
+            }
+            .section-header h2 {
+                font-size: 28px;
+            }
+            .about-text h2 {
+                font-size: 30px;
+            }
+            .about-metrics {
+                grid-template-columns: 1fr;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            .alt-text h3 {
+                font-size: 22px;
+            }
+            .metric-box {
+                padding: 15px;
+            }
         }
     </style>
 </head>
@@ -618,12 +807,41 @@ include __DIR__ . '/../includes/navbar.php';
 
     <!-- Hero Section -->
     <section class="hero">
-        <h1>Celebrate Life's Moments,<br>Logistics Simplified.</h1>
-        <p class="description">
-            EventEase is a state-of-the-art event planning platform. We provide intuitive coordinators, dynamic food calculators, and secure venue booking systems to make your planning stress-free.
-        </p>
-        <div class="hero-buttons">
-            <a href="Booking.php" class="btn btn-primary">Book Event Now</a>
+        <div class="hero-text">
+            <div class="hero-badge">
+                <i class="fas fa-star"></i> The #1 Premium Event Platform
+            </div>
+            <h1>Celebrate Life's Moments,<br>Logistics Simplified.</h1>
+            <p class="description">
+                EVENTFLARE bridges the gap between your imagination and flawless execution. Coordinate venues, dynamic budgets, and seamless bookings effortlessly.
+            </p>
+            <div class="hero-buttons">
+                <a href="ChooseEvent.php" class="btn btn-primary">Start Planning</a>
+                <a href="AboutUs.php" class="btn btn-secondary">Learn More</a>
+            </div>
+            
+            <div class="social-proof">
+                <div class="avatar-group">
+                    <img src="https://i.pravatar.cc/100?img=1" alt="User">
+                    <img src="https://i.pravatar.cc/100?img=2" alt="User">
+                    <img src="https://i.pravatar.cc/100?img=3" alt="User">
+                    <img src="https://i.pravatar.cc/100?img=4" alt="User">
+                </div>
+                <p>Loved by <span>5,000+</span><br>happy coordinators</p>
+            </div>
+        </div>
+        <div class="hero-image-wrapper">
+            <img src="assets/images/event_planning_hero.png" alt="Premium Event Planning Platform" class="hero-image">
+            
+            <div class="hero-floating-card">
+                <div class="icon">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="text">
+                    <h4>Booking Confirmed</h4>
+                    <p>Just now in New York</p>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -651,7 +869,7 @@ include __DIR__ . '/../includes/navbar.php';
                 <div class="alt-text">
                     <h3>Weddings</h3>
                     <p>Celebrate your love story in a beautifully choreographed wedding. From floral arrangements to staging, music, and lighting, we customize every detail to match your vision.</p>
-                    <a href="events/WeddingsSlids.php" class="btn btn-primary">Plan Wedding</a>
+                    <a href="events/WeddingsSlids.php" class="btn btn-primary"><i class="fas fa-heart"></i> Plan Wedding & Past Events</a>
                 </div>
             </div>
 
@@ -659,8 +877,8 @@ include __DIR__ . '/../includes/navbar.php';
             <div class="alt-row">
                 <div class="alt-text">
                     <h3>DJ & Parties</h3>
-                    <p>Bring energy to your party with top-tier DJs, interactive sound systems, and stunning neon light setups. Perfect for corporate events, anniversaries, or private celebrations.</p>
-                    <a href="events/DjPartySlide.php" class="btn btn-primary">Book DJ Party</a>
+                    <p>Bring high-voltage energy to your party with top-tier DJs, interactive sound systems, and stunning neon light setups. Perfect for club raves, rooftop sundowners, or private celebrations.</p>
+                    <a href="events/DjPartySlide.php" class="btn btn-primary"><i class="fas fa-bolt"></i> Plan Party & Past Events</a>
                 </div>
                 <div class="alt-image" style="background-image: url(assets/images/happy-men-women-throwing-confetti.jpg);"></div>
             </div>
@@ -670,8 +888,8 @@ include __DIR__ . '/../includes/navbar.php';
                 <div class="alt-image" style="background-image: url(assets/images/birth.jpg);"></div>
                 <div class="alt-text">
                     <h3>Birthdays</h3>
-                    <p>Create unforgettable birthday experiences for kids and adults alike. We coordinate customized theme designs, custom cakes, interactive games, and premium catering packages.</p>
-                    <a href="events/BirthdayList.php" class="btn btn-primary">Book Birthday</a>
+                    <p>Create unforgettable birthday experiences for kids, teens, and golden milestones. We coordinate customized theme backdrops, bespoke 3D cakes, interactive magicians, and snack buffets.</p>
+                    <a href="events/BirthdayList.php" class="btn btn-primary"><i class="fas fa-birthday-cake"></i> Plan Birthday & Past Events</a>
                 </div>
             </div>
 
@@ -679,8 +897,8 @@ include __DIR__ . '/../includes/navbar.php';
             <div class="alt-row">
                 <div class="alt-text">
                     <h3>Get Togethers</h3>
-                    <p>Reconnect with old friends, family members, or colleagues. Our comfortable spaces, custom buffet layouts, and soft backgrounds set the perfect mood for sharing stories.</p>
-                    <a href="events/GetTogether.php" class="btn btn-primary">Plan Reunion</a>
+                    <p>Reconnect with old classmates, family members, or alumni. Our comfortable outdoor venues, live charcoal BBQ grills, marquee tents, and acoustic sing-alongs set the perfect mood.</p>
+                    <a href="events/GetTogether.php" class="btn btn-primary"><i class="fas fa-handshake"></i> Plan Reunion & Past Events</a>
                 </div>
                 <div class="alt-image" style="background-image: url(assets/images/get.jpg);"></div>
             </div>
@@ -726,7 +944,7 @@ include __DIR__ . '/../includes/navbar.php';
         <div class="about-text">
             <h2>Our Story & Vision</h2>
             <p>
-                We believe that planning shouldn't get in the way of celebrating. EventEase bridges the gap between creativity and coordination, providing clients and admins a unified environment. We reduce logistical complexities and planning efforts.
+                We believe that planning shouldn't get in the way of celebrating. EVENTFLARE bridges the gap between creativity and coordination, providing clients and admins a unified environment. We reduce logistical complexities and planning efforts.
             </p>
             <div class="about-metrics">
                 <div class="metric-box">
@@ -842,7 +1060,7 @@ include __DIR__ . '/../includes/navbar.php';
     <footer class="footer">
         <div class="footer-container">
             <div class="footer-brand">
-                <h3>EventEase</h3>
+                <h3>EVENTFLARE</h3>
                 <p>Providing premium digital planning utilities. We simplify celebrating so you can focus on the memories.</p>
             </div>
             
@@ -853,6 +1071,7 @@ include __DIR__ . '/../includes/navbar.php';
                     <li><a href="AboutUs.php">About Us</a></li>
                     <li><a href="Contact.php">Contact Us</a></li>
                     <li><a href="Booking.php">Book Event</a></li>
+                    <li><a href="admin/Admin.php" style="color: var(--primary); font-weight: 600;">Admin Login</a></li>
                 </ul>
             </div>
 
@@ -869,7 +1088,7 @@ include __DIR__ . '/../includes/navbar.php';
         </div>
 
         <div class="footer-bottom">
-            &copy; <?php echo date("Y"); ?> EventEase. All rights reserved. Designed for celebrations.
+            &copy; <?php echo date("Y"); ?> EVENTFLARE. All rights reserved. Designed for celebrations.
         </div>
     </footer>
 
@@ -894,5 +1113,6 @@ include __DIR__ . '/../includes/navbar.php';
             });
         });
     </script>
+    <?php $conn->close(); ?>
 </body>
 </html>
