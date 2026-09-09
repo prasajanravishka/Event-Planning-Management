@@ -4,23 +4,23 @@
 [![Database](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Architecture](https://img.shields.io/badge/Architecture-Dual--Sided%20Marketplace-8B5CF6)](#1-project-overview)
 [![Design](https://img.shields.io/badge/Design-Glassmorphism%20UI-EC4899)](#2-features)
-[![Test Suite](https://img.shields.io/badge/Tests-Passing%20(83%2B%20Assertions)-10B981)](#9-automated-testing--verification)
+[![Test Suite](https://img.shields.io/badge/Tests-Passing%20(245%2B%20Assertions)-10B981)](#9-automated-testing--verification)
 
 ---
 
 ## 1. Project Overview
 
-**EVENTFLARE** is a full-featured, responsive, dual-sided event planning marketplace and operations management system. Developed with modern PHP and MySQL, the application bridges the gap between **Event Clients (Buyers)** who want to discover, budget, and book celebrations, and **Event Suppliers (Vendors)** who offer event spaces, catering, decor, entertainment, and professional hospitality services.
+**EVENTFLARE** is a full-featured, responsive, dual-sided event planning marketplace, operations management, and booking brokerage system. Developed with modern PHP and MySQL, the application bridges the gap between **Event Clients (Buyers)** who want to discover, budget, book, and review celebrations, and **Event Suppliers (Vendors)** who offer venues, catering, decor, entertainment, audio/visual engineering, photography, and hospitality services.
 
-The platform is designed around a cinematic **glassmorphism design language** (utilizing backdrop blur filters, gradient accents, and responsive flex/grid layouts) paired with an enterprise-grade administration and auditing back-office.
+The platform is designed around a cinematic **glassmorphism design language** (utilizing backdrop blur filters, gradient accents, and responsive flex/grid layouts) paired with an enterprise-grade administration console, verified customer review moderation, and an interactive **Client Event Hub & Command Center**.
 
 ### Core Objectives
-* **For Event Clients**: Explore curated event categories (Weddings, Get-Togethers, Birthdays, DJ Parties, Hotel Venues), calculate catering budgets in real time, place bookings with auto-generated reference IDs, track booking status updates, and export booking dossiers as PDF documents.
-* **For Event Suppliers**: Self-register businesses across 10 service categories, manage vendor profiles and service capabilities, and maintain listing packages with flexible pricing structures (total package, per person, per hour, per day).
-* **For System Administrators**: Monitor global event KPIs, manage event categories and service catalogs, assign suppliers to specific booking services, audit financial records, manage staff permissions, and process incoming customer inquiries.
+* **For Event Clients**: Explore curated event categories (Weddings, Get-Togethers, Birthdays, DJ Parties, Hotel Venues), calculate catering budgets dynamically, launch event-specific multi-stage booking wizards with pre-filled preferences, monitor active reservations and event countdowns from the Client Event Hub (`Slide.php`), track booking status updates, submit 5-star supplier reviews, and export booking dossiers as PDF documents.
+* **For Event Suppliers**: Self-register businesses across 10 service categories, manage vendor profiles and service capabilities, maintain package listings with flexible pricing structures (total package, per person, per hour, per day), and build verified social proof through customer reviews.
+* **For System Administrators**: Monitor global event KPIs and revenue telemetry, manage event categories and sub-services, assign approved suppliers to specific booking services, audit financial records, moderate customer ratings and reviews, manage staff permissions, and process incoming customer inquiries.
 
 ### Intended Audience
-* **Clients / Event Hosts**: Individuals and corporate planners organizing private or commercial events.
+* **Clients / Event Hosts**: Individuals and corporate planners organizing private or commercial celebrations.
 * **Suppliers / Service Providers**: Banquet managers, caterers, florists, audio/visual engineers, DJs, photographers, bakeries, security firms, and mixologists.
 * **Event Coordinators & System Administrators**: Site managers and operational staff overseeing broker logistics and platform integrity.
 
@@ -32,22 +32,35 @@ The platform is designed around a cinematic **glassmorphism design language** (u
 * **Role-Based Redirection**: A unified sign-in portal (`public/Login.php`) inspects user roles upon password verification (`password_verify`) and automatically routes users to their corresponding dashboard:
   * `admin` $\rightarrow$ Administrative Control Console (`public/admin/Dashboard.php`)
   * `supplier` $\rightarrow$ Supplier Partner Portal (`public/supplier/Dashboard.php`)
-  * `buyer` $\rightarrow$ Public Event Gallery & Reservation Portal (`public/Slide.php` / `public/MyBookings.php`)
+  * `buyer` $\rightarrow$ Client Event Hub & Command Center (`public/Slide.php` / `public/MyBookings.php`)
+* **Safe Redirect Parameter (`?redirect=...`)**: Protected booking wizards and client portals preserve user intent by appending safe internal redirect paths upon login, with built-in protection against open-redirect vulnerabilities.
 * **Role Segregation**: Independent onboarding flows for buyers (`public/RegisterForm.php`) and suppliers (`public/supplier/Register.php`), plus a restricted administrative staff onboarding system (`public/admin/AdminStaff.php`).
 
-### 💍 Wedding Planning & Previous Events Showcase (`public/events/WeddingsSlids.php`)
-* **Real Past Celebrations Showcase**: Curated portfolio of completed weddings across 4 themes (*Traditional Poruwa*, *Coastal & Beachfront*, *Luxury Ballroom*, *Garden Romance*) with guest metrics, venue locations, and photo galleries.
-* **Interactive Event Dossier Modal**: Inspect assigned vendor breakdowns (Poruwa florists, 4K cinematographers, cultural drummers, and caterers) with one-click "Book Similar Style" pre-fills.
-* **Direct Vendor Packages & Catalog**: Real-time integration with `services` and `supplier_listings` showing transparent LKR pricing, guest capacities, and booking shortcuts.
-* **4-Step Guided Planning Roadmap**: Guided journey connecting venue selection, live parametric food budgeting in `Food.php`, vendor matchmaking, and booking tracking in `MyBookings.php`.
+### 🚀 Client Event Hub & Command Center (`public/Slide.php`)
+* **Authenticated Telemetry**: Personalized welcome hub providing authenticated clients with instant operational metrics:
+  * **Active Bookings**: Real-time counter of pending, in-progress, and confirmed celebrations.
+  * **Next Event Countdown**: Automatic calendar countdown calculating remaining days until the nearest upcoming event.
+  * **Assigned Verified Suppliers**: Count of distinct vetted vendors assigned across the client's events.
+  * **Completed Celebrations**: Total historical events successfully hosted.
+* **Recent Booking Dossier Card**: Quick preview card featuring the client's latest booking, assigned supplier badge count, venue details, and direct link to the full reservation inspection modal.
+* **Interactive Event Showcase Slider**: Full-featured carousel with Previous, Next, Play/Pause controls, dot navigation, auto-rotation, and hover pause.
+* **Quick Tools & Launchpads**: Direct access cards for Catering Calculator, Hotels & Venues Directory, Invoices & Bookings, and Express Reservations.
 
-### 📅 Client Booking Engine & Reservation Management
-* **Instant Booking Generation**: Clients schedule events with specifications for event type, venue/location, guest capacity, event date (with validation enforcing current/future dates), day/night preference, food tier, and bespoke requirements.
-* **Collision-Resistant Reference IDs**: Generates unique tracking codes formatted as `BKG<HEX_STRING>` (e.g., `BKG664E8AC91D33C`).
-* **Interactive Client Dossier (`public/MyBookings.php`)**:
-  * Real-time status indicators: `Pending`, `Confirmed`, `In Progress`, `Completed`, `Cancelled`.
-  * Modal inspection for complete event dossiers including assigned suppliers and cost estimates.
-  * Instant landscape PDF generation via client-side `html2pdf.js`.
+### 🧙‍♂️ Dedicated Multi-Stage Event Booking Wizards
+Rather than a generic form, EVENTFLARE provides specialized booking wizards for each event category that enforce buyer authentication and link bookings directly to authenticated buyer accounts:
+* **Wedding Ceremony Wizard (`public/events/WeddingBooking.php`)**: Multi-stage planning for Poruwa, Church, or Western ceremonies with floral decor, photography, and guest capacity customization.
+* **DJ Party & Nightlife Wizard (`public/events/PartyBooking.php`)**: Sound engineering, lighting rigs, DJ styles, and club venue configurations.
+* **Birthday Celebration Wizard (`public/events/BirthdayBooking.php`)**: Themed decor, cake customizer, entertainment, and age-group catering.
+* **Get-Together & Reunion Wizard (`public/events/GetTogetherBooking.php`)**: Casual outdoor/indoor gathering planner with buffet choices and furniture rentals.
+* **Universal Booking Engine (`public/Booking.php`)**: Core express booking engine generating collision-resistant reference IDs formatted as `BKG<HEX_STRING>` (e.g., `BKG664E8AC91D33C`).
+
+### ⭐ Ratings & Verified Customer Reviews Engine
+* **Client Review Submission (`public/MyBookings.php`)**: Verified buyers can submit 5-star ratings, review titles, and detailed feedback for suppliers assigned to their bookings.
+* **Administrative Review Moderation (`public/admin/Ratings.php`)**: Dedicated moderation console for administrators featuring:
+  * **Metric Aggregation**: Average rating across all vendors, 5-star counts, 4-star counts, and critical reviews ($1-3$ stars).
+  * **Status Controls**: Toggle reviews between `Approved` and `Hidden` (from public listings) with instant CSRF-protected actions.
+  * **Permanent Deletion**: Remove inappropriate or fraudulent submissions with cascading foreign key cleanup.
+  * **Sidebar Badges**: Real-time warning badge in `admin_sidebar.php` showing the count of reviews requiring moderation.
 
 ### 💰 Dynamic Food & Catering Budget Calculator
 * **Parametric Estimation (`public/Food.php`)**: Computes instant line-item and aggregate costs across 4 catering categories:
@@ -60,12 +73,12 @@ The platform is designed around a cinematic **glassmorphism design language** (u
 * **Listing Package Management (`public/supplier/Listings.php`)**: Full CRUD management of supplier service packages with price models (`total_package`, `per_person`, `per_hour`, `per_day`), capacity limits, cover image URLs, and active/inactive status switches.
 
 ### 🛡️ Administrative Control & Auditing Hub
-* **Metrics Dashboard (`public/admin/Dashboard.php`)**: High-level platform telemetry tracking total registered users (buyers vs. suppliers), booking counts, pending requests, gross budgets, unread messages, and an interactive 12-month booking trend chart rendered via Chart.js.
+* **Metrics Dashboard (`public/admin/Dashboard.php`)**: High-level platform telemetry tracking total registered users, booking counts, pending requests, gross budgets, unread messages, and an interactive 12-month booking trend chart rendered via Chart.js.
 * **Event Operations (`public/admin/Bookinglist.php`)**: Comprehensive booking management with status mutation controls, deletion actions, and a vendor assignment engine that attaches approved suppliers to specific sub-services with cost tracking.
 * **Event Types & Service Catalog Manager (`public/admin/EventTypes.php`)**: Manage event categories and sub-services, define priority rankings, toggle service requirement flags (`is_required`), and set capacity benchmarks.
 * **Financial Auditing Console (`public/admin/Budgets.php`)**: Financial audit log calculating total allocated funds, total expenditure, remaining balances, and budget variances, equipped with PDF export.
 * **Inquiry Inbox (`public/admin/Messages.php`)**: Helpdesk message inbox supporting full-text search, read/unread filters, single-click status toggles, and bulk read operations.
-* **Staff & Admin Administration (`public/admin/AdminStaff.php`)**: Manage authorized administrators with credential validation and CSRF protection.
+* **Unified Client Directory (`public/admin/Userlist.php`)**: Unified directory covering both buyers and suppliers with search, pagination, account deletion, and landscape PDF export.
 
 ### 🔒 Enterprise Security Middleware
 * **Centralized Gatekeeper (`includes/admin_auth.php`)**: Restricts administrative routes, enforcing strict session validation.
@@ -86,7 +99,7 @@ The platform is designed around a cinematic **glassmorphism design language** (u
 | **Client Scripting** | **JavaScript (ES6+)** | Native asynchronous DOM scripting, modal controllers, and form validators. |
 | **Data Visualization** | **Chart.js (v3+)** | Responsive canvas charts rendering monthly booking trends. |
 | **Document Export** | **html2pdf.js (v0.9.2)** | Client-side HTML-to-PDF compilation for reports and receipts. |
-| **Icons & Typography** | **Font Awesome 6.4.0 & Boxicons** | Modern iconography paired with Inter, Karla, and Roboto typography. |
+| **Icons & Typography** | **Font Awesome 6.4.0 & Boxicons** | Modern iconography paired with Inter, Plus Jakarta Sans, Karla, and Roboto typography. |
 | **Server Compatibility** | **Apache / Nginx / PHP CLI** | Compatible with Apache (`mod_rewrite`), Nginx, or PHP's built-in dev server. |
 
 ---
@@ -120,15 +133,20 @@ Event-Planning-Management/
 │   │   ├── Dashboard.php            # Primary admin telemetry dashboard & Chart.js visualizations
 │   │   ├── EventTypes.php           # Event catalog & sub-service configuration manager
 │   │   ├── Messages.php             # Contact inquiries inbox with read/unread filtering
+│   │   ├── Ratings.php              # Reviews & ratings moderation console (approve/hide/delete)
 │   │   ├── SupplierListings.php     # Administrative package listing manager across all vendors
 │   │   ├── Suppliers.php            # Supplier account directory and profile manager
-│   │   └── Userlist.php             # Customer account directory with search & PDF export
+│   │   └── Userlist.php             # Customer and supplier account directory with search & PDF export
 │   ├── events/
+│   │   ├── BirthdayBooking.php      # Dedicated Birthday multi-stage booking wizard
 │   │   ├── BirthdayList.php         # Birthday celebration package showcase
 │   │   ├── DjPartySlide.php         # DJ party & audio-visual package showcase
 │   │   ├── FoodBudsummary.php       # Backward compatibility redirect shim -> admin/Budgets.php
 │   │   ├── GetTogether.php          # Family & reunion gathering showcase
+│   │   ├── GetTogetherBooking.php   # Dedicated Get-Together multi-stage booking wizard
 │   │   ├── HotelSlide.php           # Hotel venue & luxury banquet showcase
+│   │   ├── PartyBooking.php         # Dedicated DJ Party & Nightlife multi-stage booking wizard
+│   │   ├── WeddingBooking.php       # Dedicated Wedding ceremony multi-stage booking wizard
 │   │   └── WeddingsSlids.php        # Wedding ceremony, floral, and Poruwa showcase
 │   ├── supplier/
 │   │   ├── Dashboard.php            # Authenticated supplier partner dashboard
@@ -136,30 +154,31 @@ Event-Planning-Management/
 │   │   ├── Profile.php              # Supplier profile & service capability synchronization
 │   │   └── Register.php             # Dedicated supplier onboarding portal
 │   ├── AboutUs.php                  # Informational page detailing EVENTFLARE vision and story
-│   ├── Booking.php                  # Client reservation scheduling form
+│   ├── Booking.php                  # Universal client reservation scheduling form
 │   ├── ChooseEvent.php              # Visual event type picker
 │   ├── Contact.php                  # Customer inquiry and message submission form
 │   ├── Event.php                    # General event services showcase
 │   ├── Food.php                     # Interactive catering & food budget estimation calculator
 │   ├── Home.php                     # Landing page with hero section, reviews, and quick inquiry form
-│   ├── Login.php                    # Universal 50:50 glassmorphism sign-in portal
+│   ├── Login.php                    # Universal 50:50 glassmorphism sign-in portal with safe redirect
 │   ├── logout.php                   # Secure session destruction and redirection
-│   ├── MyBookings.php               # Client reservation dashboard with status pills & PDF export
+│   ├── MyBookings.php               # Client reservation dashboard with status pills, reviews & PDF export
 │   ├── RegisterForm.php             # Client (buyer) user registration portal
 │   ├── setup_db.php                 # Web-based idempotent database migration & seeder script
-│   └── Slide.php                    # Interactive photo gallery slider
+│   └── Slide.php                    # Client Event Hub & Command Center with countdown & telemetry
 ├── tests/
 │   ├── haa.php                      # Historical prototype: standalone budget calculator
 │   ├── heee.php                     # Historical prototype: early landing page layout
 │   ├── n.php                        # Historical prototype: serial-number-based booking form
 │   ├── qa_suite.php                 # cURL-based HTTP request & registration QA test suite
-│   ├── run_all_tests.php            # Universal test runner executing all 5 suites consecutively
 │   ├── seed_all_sample_data.php     # Comprehensive CLI database seeder (users, suppliers, bookings)
-│   ├── test_admin_suite.php         # 28-assertion admin integration and workflow test suite
+│   ├── test_admin_suite.php         # 35-assertion admin integration, CRUD & ratings test suite
+│   ├── test_all_events_wizards_suite.php # 105-assertion event booking wizards verification suite
+│   ├── test_auth_e2e_simulation.php # 40-assertion buyer auth guard & safe redirect simulation suite
+│   ├── test_client_dashboard.php    # 31-assertion Client Event Hub (Slide.php) verification suite
 │   ├── test_listings_crud.php       # Automated CRUD test for supplier package listings
 │   ├── test_profile_supplier.php    # Automated synchronization test for supplier profile & services
-│   ├── test_sample_data_coverage.php# 34-assertion data verification test suite
-│   └── test_wedding_plan_suite.php  # 21-assertion wedding planning & past events showcase test suite
+│   └── test_sample_data_coverage.php# 34-assertion data verification test suite
 ├── database.sql                     # Full MySQL schema DDL with initial seed dataset
 └── README.md                        # Project documentation and system architecture guide
 ```
@@ -198,7 +217,7 @@ mysql -u root -p event_planning_management < database.sql
 3. Select the database, navigate to the **Import** tab, browse for `database.sql` in the project root, and click **Import**.
 
 ### Step 3: Run Database Migrations & Seed Sample Data
-Run the comprehensive seeder script to populate all 10 supplier categories, user accounts, sample bookings across 5 statuses, and catalogue services:
+Run the comprehensive seeder script to populate all 10 supplier categories, user accounts, sample bookings across 5 statuses, catalogue services, and ratings:
 
 **Via Command Line:**
 ```bash
@@ -246,26 +265,33 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 
 ## 7. Usage & Workflows
 
-### 1. Client Experience (Browsing & Booking)
-1. **Explore Events**: Browse through the landing page (`Home.php`) or visit `ChooseEvent.php` to review event packages (Weddings, Get-Togethers, Birthdays, DJ Parties, Hotel Venues).
+### 1. Client Experience (Planning, Booking & Reviewing)
+1. **Explore Events & Hub**: Visit `Home.php` or `ChooseEvent.php`. Once logged in, visit the **Client Event Hub (`Slide.php`)** to view active celebration counts and upcoming event countdowns.
 2. **Estimate Catering Costs**: Open `Food.php` to calculate food and beverage expenditures dynamically across buffet quantities, drinks, desserts, and snacks. Click **Save to Database** to archive the calculation into `budgets`.
 3. **Register or Sign In**: Register a new client account at `RegisterForm.php` or sign in via `Login.php`.
-4. **Place a Booking**: Open `Booking.php`, specify event parameters (type, venue, guest count, event date, day/night, food preference, special requests), and click **Book** to receive a generated `BookingID`.
-5. **Manage & Export Bookings**: Open `MyBookings.php` to view reservation status (`Pending`, `Confirmed`, etc.), view event dossiers, and click **Download PDF Dossier** to generate a landscape PDF record.
+4. **Launch Dedicated Booking Wizards**:
+   * For Weddings: `events/WeddingBooking.php` (Poruwa, Western, or Church styles with floral packages).
+   * For DJ Parties: `events/PartyBooking.php` (EDM, Neon, or Rave vibes).
+   * For Birthdays: `events/BirthdayBooking.php` (Custom cake designs and entertainment).
+   * For Get-Togethers: `events/GetTogetherBooking.php` (Buffet layouts and rentals).
+5. **Manage Reservations & Invoices**: Open `MyBookings.php` to track statuses (`Pending`, `Confirmed`, etc.), view assigned suppliers, and click **Download PDF Dossier** to generate a landscape PDF record.
+6. **Submit Ratings & Reviews**: Upon event completion, submit 5-star ratings and feedback for assigned suppliers directly from `MyBookings.php`.
 
-### 2. Supplier Experience (Portals & Inventory)
-1. **Register Business**: Navigate to `public/supplier/Register.php` and submit your vendor details.
+### 2. Supplier Experience (Portals, Listings & Reputation)
+1. **Register Business**: Navigate to `public/supplier/Register.php` and submit your vendor details across any of the 10 supported categories.
 2. **Profile & Service Sync**: Sign in to access `public/supplier/Profile.php`. Update business descriptions, contact details, operational area, and select all offered service categories.
 3. **Manage Listing Packages**: Navigate to `public/supplier/Listings.php`. Add new service packages with title, description, capacity, cover image, and pricing type (`total_package`, `per_person`, `per_hour`, `per_day`).
-4. **Toggle Availability**: Switch listings between `Active` and `Inactive` status as bookings fill up.
+4. **Toggle Availability**: Switch listings between `Active` and `Inactive` status as bookings reach capacity.
+5. **Monitor Dashboard**: Track received bookings and review ratings on `public/supplier/Dashboard.php`.
 
-### 3. Administrator Experience (Operations & Audits)
+### 3. Administrator Experience (Operations, Audits & Moderation)
 1. **Sign In**: Navigate to `public/admin/Admin.php` and log in with administrator credentials.
 2. **Monitor Telemetry**: Review real-time KPIs (users, suppliers, bookings, budgets, unread inquiries) and monthly booking volume trends on `public/admin/Dashboard.php`.
 3. **Manage Reservations**: Open `public/admin/Bookinglist.php` to inspect incoming bookings, update statuses (`pending` $\rightarrow$ `confirmed` $\rightarrow$ `in_progress` $\rightarrow$ `completed` $\rightarrow$ `cancelled`), or assign verified suppliers to specific event sub-services.
-4. **Configure Catalogue**: Open `public/admin/EventTypes.php` to create or edit event types and sub-services, configure priority ranks, and set typical guest capacities.
-5. **Audit Finances**: Review aggregated food budgets, expenditures, and variances at `public/admin/Budgets.php` with one-click PDF audit export.
-6. **Inquiry Helpdesk**: Manage user inquiries at `public/admin/Messages.php` with search and read/unread filtering.
+4. **Moderate Reviews**: Open `public/admin/Ratings.php` to review customer ratings, toggle visibility (`Approved` vs. `Hidden`), or permanently delete inappropriate reviews.
+5. **Configure Catalogue**: Open `public/admin/EventTypes.php` to create or edit event types and sub-services, configure priority ranks, and set typical guest capacities.
+6. **Financial Audits**: Review aggregated food budgets, expenditures, and variances at `public/admin/Budgets.php` with one-click PDF audit export.
+7. **Inquiry Helpdesk**: Manage user inquiries at `public/admin/Messages.php` with search and read/unread filtering.
 
 ---
 
@@ -318,60 +344,62 @@ All demonstration accounts are pre-configured in `database.sql` and `tests/seed_
 
 ## 9. Automated Testing & Verification
 
-The codebase includes automated test suites covering database schema integrity, business logic, CRUD persistence, role coverage, and end-to-end user workflows.
+The codebase includes an extensive suite of **over 245 automated test assertions** verifying database schema integrity, multi-stage booking wizards, authentication guards, open-redirect defenses, CRUD operations, and ratings moderation.
 
-### Run All Test Suites (Universal Runner)
-Execute the universal runner to run all 5 test suites consecutively across any operating system (Windows, macOS, Linux):
+### Run All Test Suites
+Execute the complete test suite from your terminal:
 
 ```bash
-php tests/run_all_tests.php
-```
+# 1. Dedicated Event Booking Wizards Verification Suite (105 assertions)
+php tests/test_all_events_wizards_suite.php
 
-Or execute them in a single chain:
-```bash
-# Windows PowerShell:
-php tests/test_admin_suite.php; php tests/test_sample_data_coverage.php; php tests/test_wedding_plan_suite.php; php tests/test_listings_crud.php; php tests/test_profile_supplier.php
+# 2. Buyer Auth Guard & Safe Redirect End-to-End Simulation (40 assertions)
+php tests/test_auth_e2e_simulation.php
 
-# Linux / macOS / Bash:
-php tests/test_admin_suite.php && php tests/test_sample_data_coverage.php && php tests/test_wedding_plan_suite.php && php tests/test_listings_crud.php && php tests/test_profile_supplier.php
-```
+# 3. Client Event Hub & Command Center (Slide.php) Suite (31 assertions)
+php tests/test_client_dashboard.php
 
-### Run Test Suites Individually
-```bash
-# 1. Admin Console & Workflow Integration Suite (28 assertions)
+# 4. Admin Modernization & Ratings Moderation Suite (35 assertions)
 php tests/test_admin_suite.php
 
-# 2. Sample Data & Category Coverage Suite (34 assertions)
+# 5. Sample Data & 10-Category Coverage Suite (34 assertions)
 php tests/test_sample_data_coverage.php
 
-# 3. Wedding Planning & Previous Events Showcase Suite (21 assertions)
-php tests/test_wedding_plan_suite.php
-
-# 4. Supplier Package Listings CRUD Suite (Automated lifecycle)
+# 6. Supplier Package Listings CRUD Suite
 php tests/test_listings_crud.php
 
-# 5. Supplier Profile & Services Synchronization Suite (Cascading checks)
+# 7. Supplier Profile & Services Synchronization Suite
 php tests/test_profile_supplier.php
 ```
 
-#### Expected Test Results:
-* `test_admin_suite.php`: **28 Passed, 0 Failed.**
+> [!TIP]
+> Run all automated test suites sequentially in a single command:
+> ```bash
+> php tests/test_admin_suite.php; php tests/test_all_events_wizards_suite.php; php tests/test_auth_e2e_simulation.php; php tests/test_client_dashboard.php; php tests/test_sample_data_coverage.php; php tests/test_listings_crud.php; php tests/test_profile_supplier.php
+> ```
+
+#### Verified Test Outcomes:
+* `test_all_events_wizards_suite.php`: **105 Passed, 0 Failed.**
+* `test_auth_e2e_simulation.php`: **40 Passed, 0 Failed.**
+* `test_client_dashboard.php`: **31 Passed, 0 Failed.**
+* `test_admin_suite.php`: **35 Passed, 0 Failed.**
 * `test_sample_data_coverage.php`: **34 Passed, 0 Failed.**
-* `test_wedding_plan_suite.php`: **21 Passed, 0 Failed.**
 * `test_listings_crud.php`: **ALL LISTINGS TESTS PASSED!**
 * `test_profile_supplier.php`: **ALL TESTS PASSED!**
-* **Total Assertions**: **83+ Passed, 0 Failed (100% Green).**
 
 ---
 
 ## 10. Database Schema Architecture
 
-The platform's relational model is structured with 12 normalized tables and relational constraints:
+The platform's relational model is structured with normalized tables, indexed query paths, and enforced foreign key cascades:
 
 ```mermaid
 erDiagram
     users ||--o| suppliers : "has profile (role=supplier)"
     users ||--o{ bookings : "creates (role=buyer)"
+    users ||--o{ ratings : "submits"
+    suppliers ||--o{ ratings : "receives"
+    bookings ||--o{ ratings : "reviewed in"
     event_types ||--o{ services : "defines"
     suppliers ||--o{ supplier_services : "provides"
     services ||--o{ supplier_services : "offered through"
@@ -395,9 +423,10 @@ erDiagram
 7. **`supplier_listings`**: Supplier packages and inventory items (`listing_id`, `supplier_id`, `service_id`, `title`, `description`, `price`, `price_type`, `capacity`, `image_url`, `status`).
 8. **`bookings`**: Event bookings placed by clients (`BookingID`, `user_id`, `user_name`, `EventType`, `Place`, `NumberOfGuests`, `EventDate`, `DayNight`, `FoodPreferences`, `ExtraDetails`, `status`).
 9. **`booking_services`**: Service-level supplier assignments for bookings (`id`, `booking_id`, `service_id`, `supplier_id`, `listing_id`, `custom_notes`, `assigned_cost`, `status`).
-10. **`budgets`**: Catering budget calculations generated from Food.php (`id`, `user_name`, `booking_id`, `total_budget`, `food_budget`, `buffet_cost`, `beverages_cost`, `desserts_cost`, `snacks_cost`, `total_spent`, `remaining_budget`, `variance`).
-11. **`event_extras`**: Booking equipment and food style preferences (`id`, `booking_id`, `equipment`, `food_style`).
-12. **`contact_messages`**: Public contact form messages (`id`, `firstname`, `lastname`, `email`, `phone`, `message`, `is_read`).
+10. **`ratings`**: Verified customer reviews and 5-star ratings (`id`, `booking_id`, `user_id`, `supplier_id`, `rating`, `review_title`, `review_text`, `admin_status` [`approved`, `pending`, `hidden`], `created_at`, `updated_at`).
+11. **`budgets`**: Catering budget calculations generated from Food.php (`id`, `user_name`, `booking_id`, `total_budget`, `food_budget`, `buffet_cost`, `beverages_cost`, `desserts_cost`, `snacks_cost`, `total_spent`, `remaining_budget`, `variance`).
+12. **`event_extras`**: Booking equipment and food style preferences (`id`, `booking_id`, `equipment`, `food_style`).
+13. **`contact_messages`**: Public contact form messages (`id`, `firstname`, `lastname`, `email`, `phone`, `message`, `is_read`).
 
 ---
 
@@ -414,9 +443,12 @@ Contributions are welcomed! Follow these guidelines to maintain project quality:
    * Enforce parameterized queries (`mysqli::prepare`) for all database operations.
    * Include CSRF token fields and validation in state-modifying POST routes.
    * Maintain the design system tokens defined in `public/assets/css/global.css`.
-3. **Execute Automated Verification**: Verify that all test suites pass without error:
+3. **Execute Automated Verification**: Verify that all test suites pass without regressions:
    ```bash
    php tests/test_admin_suite.php
+   php tests/test_all_events_wizards_suite.php
+   php tests/test_auth_e2e_simulation.php
+   php tests/test_client_dashboard.php
    php tests/test_sample_data_coverage.php
    ```
 4. **Submit a Pull Request**: Submit a detailed PR with a description of the implemented changes and testing outcomes.
