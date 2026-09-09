@@ -5,6 +5,17 @@ if (session_status() === PHP_SESSION_NONE) {
 include_once __DIR__ . '/../../config/database.php';
 include __DIR__ . '/../../includes/navbar.php';
 
+// Auth State & Booking Redirect Helper
+$is_logged_in = isset($_SESSION['login_user']);
+if (!function_exists('get_booking_url')) {
+    function get_booking_url($relative_target, $is_logged_in) {
+        if ($is_logged_in) {
+            return $relative_target;
+        }
+        return '../Login.php?redirect=' . urlencode('events/' . $relative_target);
+    }
+}
+
 // 1. Fetch Get Together Services from Database (event_type_id = 2)
 $gt_services = [];
 if (isset($conn) && !$conn->connect_error) {
@@ -438,10 +449,26 @@ $previous_gatherings = [
 
         .showcase-footer {
             border-top: 1px solid var(--card-border);
-            padding-top: 16px;
+            padding-top: 14px;
             display: flex;
-            justify-content: space-between;
+            gap: 10px;
             align-items: center;
+        }
+
+        .showcase-footer .btn {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            white-space: nowrap;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1.3;
+        }
+
+        .showcase-footer .btn i {
+            font-size: 12px;
         }
 
         /* Dossier Modal */
@@ -775,7 +802,7 @@ $previous_gatherings = [
                     Whether gathering old school batches, company alumni, or multiple generations of family, EVENTFLARE coordinates live outdoor BBQ stations, canopy marquees, acoustic music duos, and comfortable seating.
                 </p>
                 <div class="hero-cta-group">
-                    <a href="GetTogetherBooking.php" class="btn btn-primary" style="background:#10b981; border-color:#10b981;">
+                    <a href="<?= get_booking_url('GetTogetherBooking.php', $is_logged_in) ?>" class="btn btn-primary" style="background:#10b981; border-color:#10b981;">
                         <i class="fas fa-handshake"></i> Plan Reunion Now
                     </a>
                     <a href="#showcase" class="btn btn-secondary">
@@ -859,7 +886,7 @@ $previous_gatherings = [
                                         onclick="openGatheringDossier(<?= htmlspecialchars(json_encode($g)) ?>)">
                                     <i class="fas fa-eye"></i> Inspect Setup
                                 </button>
-                                <a href="GetTogetherBooking.php?vibe=<?= urlencode($g['category']) ?>&guests=<?= $g['guests'] ?>" class="btn btn-primary btn-sm" style="background:#10b981; border-color:#10b981;">
+                                <a href="<?= get_booking_url('GetTogetherBooking.php?vibe=' . urlencode($g['category']) . '&guests=' . $g['guests'], $is_logged_in) ?>" class="btn btn-primary btn-sm" style="background:#10b981; border-color:#10b981;">
                                     Book Similar <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>
@@ -901,7 +928,7 @@ $previous_gatherings = [
                                 </span>
                             </div>
                             <p class="pkg-desc"><?= htmlspecialchars($pkg['description']) ?></p>
-                            <a href="GetTogetherBooking.php?package_id=<?= $pkg['listing_id'] ?>" class="btn btn-primary btn-sm" style="width:100%; text-align:center; background:#10b981; border-color:#10b981;">
+                            <a href="<?= get_booking_url('GetTogetherBooking.php?package_id=' . $pkg['listing_id'], $is_logged_in) ?>" class="btn btn-primary btn-sm" style="width:100%; text-align:center; background:#10b981; border-color:#10b981;">
                                 <i class="fas fa-check-circle"></i> Book With Package
                             </a>
                         </div>
@@ -1011,7 +1038,7 @@ $previous_gatherings = [
             <h2>Plan a Gathering Everyone Will Remember</h2>
             <p>Step into our specialized 4-stage Get Together Booking Wizard to select your setting, BBQ menu, furniture rentals, and live acoustic music.</p>
             <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
-                <a href="GetTogetherBooking.php" class="btn btn-primary" style="padding:16px 36px; font-size:16px; background:#10b981; border-color:#10b981;">
+                <a href="<?= get_booking_url('GetTogetherBooking.php', $is_logged_in) ?>" class="btn btn-primary" style="padding:16px 36px; font-size:16px; background:#10b981; border-color:#10b981;">
                     <i class="fas fa-handshake"></i> Start Get Together Wizard
                 </a>
                 <a href="../ChooseEvent.php" class="btn btn-secondary" style="padding:16px 30px; font-size:16px;">
@@ -1042,7 +1069,7 @@ $previous_gatherings = [
 
             <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px;">
                 <button type="button" class="btn btn-secondary" onclick="closeGatheringDossier()">Close</button>
-                <a id="modalBookBtn" href="GetTogetherBooking.php" class="btn btn-primary" style="background:#10b981; border-color:#10b981;">
+                <a id="modalBookBtn" href="<?= get_booking_url('GetTogetherBooking.php', $is_logged_in) ?>" class="btn btn-primary" style="background:#10b981; border-color:#10b981;">
                     <i class="fas fa-handshake"></i> Book With This Vibe
                 </a>
             </div>
@@ -1085,7 +1112,9 @@ $previous_gatherings = [
                 sList.appendChild(item);
             }
 
-            document.getElementById('modalBookBtn').href = `GetTogetherBooking.php?vibe=${encodeURIComponent(gt.category)}&guests=${gt.guests}`;
+            const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
+            const targetWizard = `GetTogetherBooking.php?vibe=${encodeURIComponent(gt.category)}&guests=${gt.guests}`;
+            document.getElementById('modalBookBtn').href = isLoggedIn ? targetWizard : `../Login.php?redirect=${encodeURIComponent('events/' + targetWizard)}`;
 
             document.getElementById('gatheringDossierModal').classList.add('active');
             document.body.style.overflow = 'hidden';

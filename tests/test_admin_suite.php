@@ -58,6 +58,7 @@ assert_test("public/admin/SupplierListings.php exists", file_exists(__DIR__ . '/
 assert_test("public/admin/EventTypes.php exists", file_exists(__DIR__ . '/../public/admin/EventTypes.php'));
 assert_test("public/admin/AdminStaff.php exists", file_exists(__DIR__ . '/../public/admin/AdminStaff.php'));
 assert_test("public/admin/Budgets.php exists", file_exists(__DIR__ . '/../public/admin/Budgets.php'));
+assert_test("public/admin/Ratings.php exists", file_exists(__DIR__ . '/../public/admin/Ratings.php'));
 assert_test("public/MyBookings.php exists", file_exists(__DIR__ . '/../public/MyBookings.php'));
 
 // 8. Test Add & Edit Supplier Workflow
@@ -215,6 +216,54 @@ assert_test("Admin can remove supplier assignment from a booking service", $del_
 $conn->query("DELETE FROM bookings WHERE BookingID = '{$t_bid}'");
 $conn->query("DELETE FROM suppliers WHERE id = {$t_sid}");
 $conn->query("DELETE FROM users WHERE id = {$t_uid}");
+
+// 16. Test Ratings & Reviews Architecture
+$res = $conn->query("SHOW TABLES LIKE 'ratings'");
+assert_test("ratings table exists in database", $res && $res->num_rows > 0);
+
+// 17. Verify ratings table schema columns
+$col_res = $conn->query("SHOW COLUMNS FROM ratings LIKE 'admin_status'");
+assert_test("ratings table has 'admin_status' moderation column", $col_res && $col_res->num_rows > 0);
+
+// 18. Test Customer Review Submission & Average Rating Query
+$sample_cust = $conn->query("SELECT id FROM users WHERE role = 'buyer' LIMIT 1")->fetch_assoc();
+$sample_supp = $conn->query("SELECT id FROM suppliers LIMIT 1")->fetch_assoc();
+$sample_bkg = $conn->query("SELECT BookingID FROM bookings LIMIT 1")->fetch_assoc();
+
+if ($sample_cust && $sample_supp && $sample_bkg) {
+    $c_id = (int)$sample_cust['id'];
+    $s_id = (int)$sample_supp['id'];
+    $b_id = $sample_bkg['BookingID'];
+
+    $ins_rev = $conn->prepare("
+        INSERT INTO ratings (booking_id, user_id, supplier_id, rating, review_title, review_text, admin_status)
+        VALUES (?, ?, ?, 5, 'Integration Test Review', 'Automated test content', 'approved')
+        ON DUPLICATE KEY UPDATE rating = 5, review_title = 'Integration Test Review', review_text = 'Automated test content'
+    ");
+    $ins_rev->bind_param("sii", $b_id, $c_id, $s_id);
+    $ins_ok = $ins_rev->execute();
+    $ins_rev->close();
+    assert_test("Customer can submit verified rating and review", $ins_ok);
+
+    // 19. Test supplier rating aggregation query
+    $agg_res = $conn->query("SELECT AVG(rating) as avg_score, COUNT(*) as cnt FROM ratings WHERE supplier_id = {$s_id} AND admin_status = 'approved'");
+    $agg_row = $agg_res ? $agg_res->fetch_assoc() : null;
+    assert_test("Supplier average rating aggregation query succeeds", $agg_row && (float)$agg_row['avg_score'] > 0);
+
+    // 20. Test Admin Moderation Toggle (Approved -> Hidden)
+    $upd_rev = $conn->prepare("UPDATE ratings SET admin_status = 'hidden' WHERE booking_id = ? AND user_id = ? AND supplier_id = ?");
+    $upd_rev->bind_param("sii", $b_id, $c_id, $s_id);
+    $upd_ok = $upd_rev->execute();
+    $upd_rev->close();
+    assert_test("Admin can moderate and hide a customer review", $upd_ok);
+
+    // 21. Clean up test rating
+    $del_rev = $conn->prepare("DELETE FROM ratings WHERE booking_id = ? AND user_id = ? AND supplier_id = ?");
+    $del_rev->bind_param("sii", $b_id, $c_id, $s_id);
+    $del_ok = $del_rev->execute();
+    $del_rev->close();
+    assert_test("Admin can delete a review record", $del_ok);
+}
 
 echo "=================================================\n";
 echo "Test Results: {$passed} Passed, {$failed} Failed.\n";

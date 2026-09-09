@@ -5,6 +5,17 @@ if (session_status() === PHP_SESSION_NONE) {
 include_once __DIR__ . '/../../config/database.php';
 include __DIR__ . '/../../includes/navbar.php';
 
+// Auth State & Booking Redirect Helper
+$is_logged_in = isset($_SESSION['login_user']);
+if (!function_exists('get_booking_url')) {
+    function get_booking_url($relative_target, $is_logged_in) {
+        if ($is_logged_in) {
+            return $relative_target;
+        }
+        return '../Login.php?redirect=' . urlencode('events/' . $relative_target);
+    }
+}
+
 // 1. Fetch Wedding Services from Database
 $wedding_services = [];
 if (isset($conn) && !$conn->connect_error) {
@@ -479,8 +490,18 @@ $previous_weddings = [
 
         .wedding-card-actions .btn {
             flex: 1;
-            padding: 10px 14px;
+            padding: 8px 12px;
             font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            white-space: nowrap;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1.3;
+        }
+
+        .wedding-card-actions .btn i {
+            font-size: 12px;
         }
 
         /* 6 Core Services Grid */
@@ -951,7 +972,7 @@ $previous_weddings = [
                 </div>
 
                 <div class="hero-cta">
-                    <a href="WeddingBooking.php" class="btn btn-primary">
+                    <a href="<?= get_booking_url('WeddingBooking.php', $is_logged_in) ?>" class="btn btn-primary">
                         <i class="fas fa-calendar-check"></i> Book Wedding Now
                     </a>
                     <a href="#past-weddings" class="btn btn-secondary">
@@ -1014,7 +1035,7 @@ $previous_weddings = [
                                         data-index="<?= $idx ?>">
                                     <i class="fas fa-info-circle"></i> View Dossier
                                 </button>
-                                <a href="WeddingBooking.php?style=<?= urlencode($wed['category']) ?>&venue=<?= urlencode($wed['venue']) ?>&guests=<?= $wed['guests'] ?>" 
+                                <a href="<?= get_booking_url('WeddingBooking.php?style=' . urlencode($wed['category']) . '&venue=' . urlencode($wed['venue']) . '&guests=' . $wed['guests'], $is_logged_in) ?>" 
                                    class="btn btn-primary">
                                     <i class="fas fa-check"></i> Book Similar
                                 </a>
@@ -1101,7 +1122,7 @@ $previous_weddings = [
                                 </div>
                             </div>
 
-                            <a href="WeddingBooking.php?package_id=<?= $pkg['listing_id'] ?>" 
+                            <a href="<?= get_booking_url('WeddingBooking.php?package_id=' . $pkg['listing_id'], $is_logged_in) ?>" 
                                class="btn btn-primary">
                                 <i class="fas fa-shopping-cart"></i> Book With Package
                             </a>
@@ -1205,7 +1226,7 @@ $previous_weddings = [
                 <h2>Ready to Begin Your Wedding Story?</h2>
                 <p>Let EVENTFLARE connect you with accredited vendors, manage your event timeline, and turn your dream celebration into reality.</p>
                 <div class="final-cta-buttons">
-                    <a href="WeddingBooking.php" class="btn btn-primary" style="background:#fff; color:var(--primary); font-weight:700;">
+                    <a href="<?= get_booking_url('WeddingBooking.php', $is_logged_in) ?>" class="btn btn-primary" style="background:#fff; color:var(--primary); font-weight:700;">
                         <i class="fas fa-calendar-check"></i> Launch Wedding Wizard
                     </a>
                     <a href="../ChooseEvent.php" class="btn btn-secondary" style="border-color:rgba(255,255,255,0.4); color:#fff;">
@@ -1299,8 +1320,10 @@ $previous_weddings = [
                     servicesContainer.appendChild(row);
                 }
 
+                const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
+                const targetWizard = `WeddingBooking.php?style=${encodeURIComponent(data.category)}&venue=${encodeURIComponent(data.venue)}&guests=${data.guests}`;
                 const bookBtn = document.getElementById('modalBookBtn');
-                bookBtn.href = `WeddingBooking.php?style=${encodeURIComponent(data.category)}&venue=${encodeURIComponent(data.venue)}&guests=${data.guests}`;
+                bookBtn.href = isLoggedIn ? targetWizard : `../Login.php?redirect=${encodeURIComponent('events/' + targetWizard)}`;
 
                 modal.classList.add('open');
             });

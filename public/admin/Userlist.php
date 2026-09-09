@@ -60,17 +60,11 @@ $total_rows = (int)$count_stmt->get_result()->fetch_assoc()['c'];
 $total_pages = ceil($total_rows / $limit);
 $count_stmt->close();
 
-// Fetch total suppliers count for the segmented navigation tab
-$total_suppliers_count = 0;
-$supp_count_res = $conn->query("SELECT COUNT(*) as c FROM suppliers");
-if ($supp_count_res) {
-    $total_suppliers_count = (int)$supp_count_res->fetch_assoc()['c'];
-}
-
-// Fetch customer accounts with booking statistics
+// Fetch customer accounts with booking and review statistics
 $sql = "SELECT u.id, u.username, u.fullname, u.email, u.role, u.created_at,
                (SELECT COUNT(*) FROM bookings b WHERE b.user_name = u.username OR b.user_id = u.id) AS client_bookings_count,
-               (SELECT MAX(b.EventDate) FROM bookings b WHERE b.user_name = u.username OR b.user_id = u.id) AS latest_event_date
+               (SELECT MAX(b.EventDate) FROM bookings b WHERE b.user_name = u.username OR b.user_id = u.id) AS latest_event_date,
+               (SELECT COUNT(*) FROM ratings r WHERE r.user_id = u.id) AS reviews_count
         FROM users u
         WHERE {$where_sql}
         ORDER BY u.id DESC
@@ -87,6 +81,39 @@ if (!empty($types)) {
 $stmt->execute();
 $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+
+// Preload bookings for listed users to display in Client Dossier
+$user_bookings_map = [];
+$usernames = array_column($users, 'username');
+if (!empty($usernames)) {
+    $escaped_usernames = array_map(function($u) use ($conn) {
+        return "'" . $conn->real_escape_string($u) . "'";
+    }, $usernames);
+    $in_usernames = implode(',', $escaped_usernames);
+    $b_res = $conn->query("
+        SELECT BookingID, user_name, EventType, EventDate, Place, NumberOfGuests, status, created_at, DayNight
+        FROM bookings 
+        WHERE user_name IN ($in_usernames)
+        ORDER BY EventDate DESC
+    ");
+    if ($b_res) {
+        while ($b = $b_res->fetch_assoc()) {
+            $user_bookings_map[$b['user_name']][] = $b;
+        }
+    }
+}
+
+foreach ($users as &$u) {
+    $u['bookings'] = $user_bookings_map[$u['username']] ?? [];
+}
+unset($u);
+
+// Fetch total suppliers count for directory segmented switcher
+$total_suppliers_count = 0;
+$sup_count_res = $conn->query("SELECT COUNT(*) as c FROM suppliers");
+if ($sup_count_res) {
+    $total_suppliers_count = (int)$sup_count_res->fetch_assoc()['c'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -109,7 +136,7 @@ $stmt->close();
         <div class="dashboard-header">
             <div class="dashboard-title">
                 <h1>Customer Directory</h1>
-                <p>Manage registered customer/buyer accounts, view booking histories, and moderate access.</p>
+                <p>Manage registered customer accounts, view booking histories, and moderate access.</p>
             </div>
             <div class="dashboard-user">
                 <i class="fas fa-user-shield"></i>
@@ -212,14 +239,12 @@ $stmt->close();
                                     <td><?= date('M j, Y', strtotime($u['created_at'])); ?></td>
                                     <td>
                                         <div class="table-actions">
-                                            <!-- View Bookings Link -->
-                                            <?php if ((int)$u['client_bookings_count'] > 0): ?>
-                                                <a href="Bookinglist.php?search=<?= urlencode($u['username']); ?>" 
-                                                   class="btn btn-outline btn-sm" 
-                                                   title="View Customer's Bookings in Booking Console">
-                                                    <i class="fas fa-calendar-alt"></i> View Bookings
-                                                </a>
-                                            <?php endif; ?>
+                                            <!-- View Client Dossier Button -->
+                                            <button type="button" class="btn btn-outline btn-sm view-client-btn" 
+                                                    data-client="<?= htmlspecialchars(json_encode($u), ENT_QUOTES, 'UTF-8'); ?>"
+                                                    title="View Client Profile & Reservation History">
+                                                <i class="fas fa-eye"></i> View
+                                            </button>
 
                                             <!-- Delete User -->
                                             <form method="POST" action="Userlist.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete customer <?= htmlspecialchars($u['username']); ?>? Any associated client data will be removed.');">
@@ -227,7 +252,7 @@ $stmt->close();
                                                 <input type="hidden" name="action" value="delete_user">
                                                 <input type="hidden" name="user_id" value="<?= $u['id']; ?>">
                                                 <input type="hidden" name="username" value="<?= htmlspecialchars($u['username']); ?>">
-                                                <button type="submit" class="btn btn-danger-outline btn-sm" title="Delete Customer Account">
+                                                <button type="submit" class="btn btn-danger-outline btn-sm" title="Delete Client Account">
                                                     <i class="fas fa-trash-alt"></i>
                                                 </button>
                                             </form>
@@ -274,7 +299,325 @@ $stmt->close();
         </div>
     </main>
 
+    <!-- Modal: View Client Dossier -->
+    <div class="admin-modal" id="viewClientModal">
+        <div class="modal-dialog modal-dialog-lg">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(99, 102, 241, 0.12); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div>
+                        <h3 id="vcModalTitle" style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-heading);">Client Dossier</h3>
+                        <p id="vcModalSubtitle" style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">Registered Client Profile & Reservation History</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('viewClientModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="viewClientBody" style="max-height: 75vh; overflow-y: auto;">
+                <!-- Populated dynamically by JS -->
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <button type="button" class="btn btn-outline btn-sm" id="printClientDossierBtn" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
+                    <i class="fas fa-print"></i> Print Client Record
+                </button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <a href="#" id="vcAllBookingsBtn" class="btn btn-primary btn-sm" style="display: none;">
+                        <i class="fas fa-calendar-alt"></i> All Bookings in Console
+                    </a>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('viewClientModal')">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        // Close on backdrop click
+        document.querySelectorAll('.admin-modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(modal.id);
+            });
+        });
+
+        let activeDossierClient = null;
+
+        // View Client Click
+        document.querySelectorAll('.view-client-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const c = JSON.parse(btn.getAttribute('data-client'));
+                activeDossierClient = c;
+                renderClientDossier(c);
+                openModal('viewClientModal');
+            });
+        });
+
+        function renderClientDossier(c) {
+            document.getElementById('vcModalTitle').innerText = c.fullname || c.username;
+            document.getElementById('vcModalSubtitle').innerText = `@${c.username} • Client ID #${c.id} • Registered ${c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}`;
+
+            const allBookingsBtn = document.getElementById('vcAllBookingsBtn');
+            const bookingsCount = parseInt(c.client_bookings_count || 0);
+            if (bookingsCount > 0) {
+                allBookingsBtn.style.display = 'inline-flex';
+                allBookingsBtn.href = `Bookinglist.php?search=${encodeURIComponent(c.username)}`;
+            } else {
+                allBookingsBtn.style.display = 'none';
+            }
+
+            const bookings = c.bookings || [];
+            let bookingsHtml = '';
+            if (bookings.length > 0) {
+                bookingsHtml = `
+                    <div style="overflow-x: auto; margin-top: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 10px 12px;">Booking ID</th>
+                                    <th style="padding: 10px 12px;">Event Type</th>
+                                    <th style="padding: 10px 12px;">Date & Session</th>
+                                    <th style="padding: 10px 12px;">Location</th>
+                                    <th style="padding: 10px 12px;">Guests</th>
+                                    <th style="padding: 10px 12px;">Status</th>
+                                    <th style="padding: 10px 12px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${bookings.map(b => `
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 10px 12px; font-weight: 700; color: var(--primary);">
+                                            #${b.BookingID}
+                                        </td>
+                                        <td style="padding: 10px 12px; font-weight: 600;">
+                                            ${escapeHtml(b.EventType)}
+                                        </td>
+                                        <td style="padding: 10px 12px;">
+                                            <div>${b.EventDate}</div>
+                                            <small style="color: #64748b;">${escapeHtml(b.DayNight || 'Day')}</small>
+                                        </td>
+                                        <td style="padding: 10px 12px; color: #475569;">
+                                            <i class="fas fa-map-marker-alt fa-xs" style="color: #ef4444;"></i> ${escapeHtml(b.Place || '-')}
+                                        </td>
+                                        <td style="padding: 10px 12px; font-weight: 600;">
+                                            ${b.NumberOfGuests}
+                                        </td>
+                                        <td style="padding: 10px 12px;">
+                                            <span class="status-pill status-${b.status || 'pending'}" style="font-size: 11px; padding: 2px 8px;">
+                                                ${(b.status || 'pending').toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td style="padding: 10px 12px; text-align: right;">
+                                            <a href="Bookinglist.php?search=${b.BookingID}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 3px 8px;" title="Open in Booking Console">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                bookingsHtml = `
+                    <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 25px; text-align: center; color: #64748b; font-size: 13px; margin-top: 10px;">
+                        <i class="fas fa-calendar-times" style="font-size: 26px; color: #cbd5e1; margin-bottom: 6px; display: block;"></i>
+                        No event reservations placed by this client yet.
+                    </div>
+                `;
+            }
+
+            document.getElementById('viewClientBody').innerHTML = `
+                <!-- Quick Stats Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center;">
+                        <small style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; display: block;">TOTAL BOOKINGS</small>
+                        <div style="font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 4px;">${c.client_bookings_count || 0}</div>
+                    </div>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px; text-align: center;">
+                        <small style="color: #166534; font-size: 11px; font-weight: 700; text-transform: uppercase; display: block;">ACCOUNT STATUS</small>
+                        <div style="font-size: 14px; font-weight: 800; color: #15803d; margin-top: 6px; text-transform: uppercase;">
+                            <i class="fas fa-check-circle"></i> Active
+                        </div>
+                    </div>
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px; text-align: center;">
+                        <small style="color: #1e40af; font-size: 11px; font-weight: 700; text-transform: uppercase; display: block;">ROLE</small>
+                        <div style="font-size: 14px; font-weight: 800; color: #2563eb; margin-top: 6px; text-transform: uppercase;">
+                            ${escapeHtml(c.role || 'Client')}
+                        </div>
+                    </div>
+                    <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 12px; text-align: center;">
+                        <small style="color: #6b21a8; font-size: 11px; font-weight: 700; text-transform: uppercase; display: block;">LATEST EVENT</small>
+                        <div style="font-size: 13px; font-weight: 700; color: #6b21a8; margin-top: 6px;">
+                            ${c.latest_event_date ? new Date(c.latest_event_date).toLocaleDateString() : 'None scheduled'}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile & Account Details Cards -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                        <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-id-badge"></i> Client Identity Profile
+                        </div>
+                        <div style="display: grid; gap: 10px; font-size: 13px;">
+                            <div>
+                                <strong style="color: #64748b; font-size: 11px; display: block;">FULL NAME</strong>
+                                <span style="font-weight: 700; font-size: 15px; color: var(--text-heading);">${escapeHtml(c.fullname || 'N/A')}</span>
+                            </div>
+                            <div>
+                                <strong style="color: #64748b; font-size: 11px; display: block;">USERNAME</strong>
+                                <span style="font-weight: 600; color: var(--primary);">@${escapeHtml(c.username)}</span>
+                            </div>
+                            <div>
+                                <strong style="color: #64748b; font-size: 11px; display: block;">CLIENT ACCOUNT ID</strong>
+                                <span style="font-weight: 600;">#USR-${c.id}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                        <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-address-card"></i> Contact & System Details
+                        </div>
+                        <div style="display: grid; gap: 10px; font-size: 13px;">
+                            <div>
+                                <strong style="color: #64748b; font-size: 11px; display: block;">EMAIL ADDRESS</strong>
+                                <a href="mailto:${escapeHtml(c.email)}" style="color: var(--primary); font-weight: 600; text-decoration: none;">
+                                    <i class="fas fa-envelope fa-xs"></i> ${escapeHtml(c.email)}
+                                </a>
+                            </div>
+                            <div>
+                                <strong style="color: #64748b; font-size: 11px; display: block;">REGISTERED DATE</strong>
+                                <span style="font-weight: 600; color: var(--text-heading);">${c.created_at ? new Date(c.created_at).toLocaleString() : 'N/A'}</span>
+                            </div>
+                            <div>
+                                <strong style="color: #64748b; font-size: 11px; display: block;">COMMUNICATION</strong>
+                                <a href="Messages.php?search=${encodeURIComponent(c.username)}" style="font-size: 12px; font-weight: 600; color: #2563eb; text-decoration: none;">
+                                    <i class="fas fa-comments fa-xs"></i> Check Contact Inquiries &rarr;
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Reservations History -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-calendar-check"></i> Client Event Reservations (${bookings.length})
+                        </div>
+                        ${bookings.length > 0 ? `
+                            <a href="Bookinglist.php?search=${encodeURIComponent(c.username)}" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 4px 10px;">
+                                <i class="fas fa-external-link-alt fa-xs"></i> View in Bookings
+                            </a>
+                        ` : ''}
+                    </div>
+                    ${bookingsHtml}
+                </div>
+            `;
+        }
+
+        // Print Client Dossier
+        document.getElementById('printClientDossierBtn').addEventListener('click', () => {
+            if (!activeDossierClient) return;
+            const c = activeDossierClient;
+            const bookings = c.bookings || [];
+
+            let bookingsRows = '';
+            if (bookings.length > 0) {
+                bookingsRows = bookings.map(b => `
+                    <tr>
+                        <td><strong>#${b.BookingID}</strong></td>
+                        <td>${b.EventType}</td>
+                        <td>${b.EventDate} (${b.DayNight || 'Day'})</td>
+                        <td>${b.Place || '-'}</td>
+                        <td>${b.NumberOfGuests}</td>
+                        <td>${(b.status || 'pending').toUpperCase()}</td>
+                    </tr>
+                `).join('');
+            } else {
+                bookingsRows = `<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No event reservations booked yet.</td></tr>`;
+            }
+
+            const win = window.open('', '', 'width=850,height=700');
+            win.document.write(`
+                <html>
+                <head>
+                    <title>Client Record - ${c.fullname || c.username}</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 30px; color: #1e293b; line-height: 1.5; }
+                        h1 { color: #4f46e5; margin: 0; font-size: 24px; }
+                        h3 { color: #0f172a; margin: 25px 0 10px; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+                        th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
+                        th { background: #f8fafc; font-weight: 700; color: #475569; }
+                    </style>
+                </head>
+                <body>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 2px solid #6366f1; padding-bottom: 12px;">
+                        <div>
+                            <h1>EVENTFLARE</h1>
+                            <p style="margin:4px 0 0; color:#64748b; font-size:12px;">Official Client Account Dossier</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <strong style="font-size:16px;">#USR-${c.id}</strong><br>
+                            <small>Printed: ${new Date().toLocaleDateString()}</small>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:15px; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
+                        <div>
+                            <strong>Full Name:</strong> ${c.fullname || 'N/A'}<br>
+                            <strong>Username:</strong> @${c.username}<br>
+                            <strong>Account Role:</strong> ${c.role || 'Client'}<br>
+                        </div>
+                        <div>
+                            <strong>Email:</strong> ${c.email}<br>
+                            <strong>Total Bookings:</strong> ${c.client_bookings_count || 0}<br>
+                            <strong>Registered:</strong> ${c.created_at || 'N/A'}<br>
+                        </div>
+                    </div>
+
+                    <h3>Reservation & Booking History</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>Event Type</th>
+                                <th>Date & Timing</th>
+                                <th>Location</th>
+                                <th>Guests</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${bookingsRows}</tbody>
+                    </table>
+                </body>
+                </html>
+            `);
+            win.document.close();
+            win.focus();
+            win.print();
+            win.close();
+        });
+
         // PDF Export
         document.getElementById("downloadPdf").addEventListener("click", function () {
             const element = document.getElementById("makepdf");

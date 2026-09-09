@@ -171,7 +171,7 @@ if (strpos($current_uri, '/admin/') !== false || strpos($current_uri, '/events/'
                     <?php elseif (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
                         <li><a href="<?php echo $path_prefix; ?>supplier/Dashboard.php" class="nav-link">Supplier Panel</a></li>
                     <?php else: ?>
-                        <li><a href="<?php echo $path_prefix; ?>MyBookings.php" class="nav-link">My Bookings</a></li>
+                        <li><a href="<?php echo $path_prefix; ?>Slide.php" class="nav-link">Dashboard</a></li>
                     <?php endif; ?>
                     <li><a href="<?php echo $path_prefix; ?>logout.php" class="nav-link btn btn-secondary" style="border-radius:30px; padding: 8px 20px; font-size: 13px;">Logout</a></li>
                 <?php else: ?>

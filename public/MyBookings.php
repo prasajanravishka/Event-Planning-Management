@@ -5,6 +5,50 @@ if (!isset($_SESSION['login_user'])) {
     exit();
 }
 include __DIR__ . '/../config/database.php';
+
+$user = $_SESSION['login_user'];
+$user_id = $_SESSION['user_id'] ?? 0;
+if (empty($user_id) && isset($conn)) {
+    $u_stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
+    if ($u_stmt) {
+        $u_stmt->bind_param("s", $user);
+        $u_stmt->execute();
+        $u_res = $u_stmt->get_result();
+        if ($u_row = $u_res->fetch_assoc()) {
+            $user_id = (int)$u_row['id'];
+            $_SESSION['user_id'] = $user_id;
+        }
+        $u_stmt->close();
+    }
+}
+
+// Handle Rating & Review Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'submit_rating') {
+    $booking_id = trim($_POST['booking_id'] ?? '');
+    $supplier_id = (int)($_POST['supplier_id'] ?? 0);
+    $rating = (int)($_POST['rating'] ?? 5);
+    $review_title = trim(htmlspecialchars($_POST['review_title'] ?? ''));
+    $review_text = trim(htmlspecialchars($_POST['review_text'] ?? ''));
+
+    if ($rating < 1) $rating = 1;
+    if ($rating > 5) $rating = 5;
+
+    if (!empty($booking_id) && $supplier_id > 0 && $user_id > 0) {
+        $ins = $conn->prepare("
+            INSERT INTO ratings (booking_id, user_id, supplier_id, rating, review_title, review_text, admin_status)
+            VALUES (?, ?, ?, ?, ?, ?, 'approved')
+            ON DUPLICATE KEY UPDATE rating = VALUES(rating), review_title = VALUES(review_title), review_text = VALUES(review_text), admin_status = 'approved'
+        ");
+        if ($ins) {
+            $ins->bind_param("siiiss", $booking_id, $user_id, $supplier_id, $rating, $review_title, $review_text);
+            $ins->execute();
+            $ins->close();
+        }
+    }
+    header("Location: MyBookings.php?reviewed=1");
+    exit();
+}
+
 include __DIR__ . '/../includes/navbar.php';
 ?>
 <!DOCTYPE html>
@@ -233,6 +277,33 @@ include __DIR__ . '/../includes/navbar.php';
                     <tbody>
                         <?php
                         $user = $_SESSION['login_user'];
+                        $user_id = $_SESSION['user_id'] ?? 0;
+                        if (empty($user_id) && isset($conn)) {
+                            $u_stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
+                            if ($u_stmt) {
+                                $u_stmt->bind_param("s", $user);
+                                $u_stmt->execute();
+                                $u_res = $u_stmt->get_result();
+                                if ($u_row = $u_res->fetch_assoc()) {
+                                    $user_id = (int)$u_row['id'];
+                                    $_SESSION['user_id'] = $user_id;
+                                }
+                                $u_stmt->close();
+                            }
+                        }
+
+                        // Preload existing reviews submitted by this customer
+                        $user_ratings_map = [];
+                        $ur_stmt = $conn->prepare("SELECT id, booking_id, supplier_id, rating, review_title, review_text FROM ratings WHERE user_id = ?");
+                        if ($ur_stmt) {
+                            $ur_stmt->bind_param("i", $user_id);
+                            $ur_stmt->execute();
+                            $ur_res = $ur_stmt->get_result();
+                            while ($ur = $ur_res->fetch_assoc()) {
+                                $user_ratings_map[$ur['booking_id'] . '_' . $ur['supplier_id']] = $ur;
+                            }
+                            $ur_stmt->close();
+                        }
 
                         // Preload assigned services & suppliers for client's bookings
                         $services_map = [];
@@ -247,14 +318,16 @@ include __DIR__ . '/../includes/navbar.php';
                             JOIN services s ON bs.service_id = s.service_id
                             LEFT JOIN suppliers sup ON bs.supplier_id = sup.id
                             LEFT JOIN supplier_listings sl ON bs.listing_id = sl.listing_id
-                            WHERE b.user_name = ?
+                            WHERE (b.user_name = ? OR (b.user_id IS NOT NULL AND b.user_id = ?))
                             ORDER BY s.priority_rank ASC, bs.id ASC
                         ");
                         if ($bs_stmt) {
-                            $bs_stmt->bind_param("s", $user);
+                            $bs_stmt->bind_param("si", $user, $user_id);
                             $bs_stmt->execute();
                             $bs_res = $bs_stmt->get_result();
                             while ($bs_row = $bs_res->fetch_assoc()) {
+                                $k = $bs_row['booking_id'] . '_' . $bs_row['supplier_id'];
+                                $bs_row['user_rating'] = $user_ratings_map[$k] ?? null;
                                 $services_map[$bs_row['booking_id']][] = $bs_row;
                             }
                             $bs_stmt->close();
@@ -264,11 +337,11 @@ include __DIR__ . '/../includes/navbar.php';
                             SELECT b.*, ee.equipment, ee.food_style
                             FROM bookings b
                             LEFT JOIN event_extras ee ON b.BookingID = ee.booking_id
-                            WHERE b.user_name = ? 
+                            WHERE (b.user_name = ? OR (b.user_id IS NOT NULL AND b.user_id = ?))
                             ORDER BY b.EventDate DESC
                         ");
                         if ($stmt) {
-                            $stmt->bind_param("s", $user);
+                            $stmt->bind_param("si", $user, $user_id);
                             $stmt->execute();
                             $result = $stmt->get_result();
 
@@ -323,6 +396,74 @@ include __DIR__ . '/../includes/navbar.php';
                 </button>
                 <button type="button" style="padding: 8px 18px; border-radius: 20px; border: none; background: #e2e8f0; font-weight: 700; cursor: pointer;" onclick="closeClientModal()">Close</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal: Rate & Review Supplier -->
+    <div class="client-modal" id="rateSupplierModal">
+        <div class="client-modal-dialog" style="max-width: 520px;">
+            <div class="client-modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: #fffbeb; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid #fde68a;">
+                        <i class="fas fa-star" style="color: #f59e0b;"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--text-heading);">Rate & Review Supplier</h3>
+                        <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);" id="rateSupplierSubtitle">Share your verified event experience</p>
+                    </div>
+                </div>
+                <button type="button" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted);" onclick="closeRateModal()">&times;</button>
+            </div>
+            <form method="POST" action="MyBookings.php" id="rateSupplierForm">
+                <input type="hidden" name="action" value="submit_rating">
+                <input type="hidden" name="booking_id" id="rateBookingId">
+                <input type="hidden" name="supplier_id" id="rateSupplierId">
+                <input type="hidden" name="rating" id="rateScoreInput" value="5">
+
+                <div class="client-modal-body" style="padding: 20px;">
+                    <!-- Star Picker -->
+                    <div style="text-align: center; margin-bottom: 20px; background: #f8fafc; padding: 16px; border-radius: 14px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">
+                            Overall Experience Score
+                        </div>
+                        <div id="starPickerContainer" style="display: inline-flex; gap: 8px; font-size: 32px; cursor: pointer;">
+                            <i class="fas fa-star star-interactive" data-val="1" style="color: #f59e0b;"></i>
+                            <i class="fas fa-star star-interactive" data-val="2" style="color: #f59e0b;"></i>
+                            <i class="fas fa-star star-interactive" data-val="3" style="color: #f59e0b;"></i>
+                            <i class="fas fa-star star-interactive" data-val="4" style="color: #f59e0b;"></i>
+                            <i class="fas fa-star star-interactive" data-val="5" style="color: #f59e0b;"></i>
+                        </div>
+                        <div id="starScoreLabel" style="font-size: 13px; font-weight: 800; color: #b45309; margin-top: 6px;">
+                            5 / 5 - Exceptional Quality
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 14px;">
+                        <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">
+                            Headline / Title (Optional)
+                        </label>
+                        <input type="text" name="review_title" id="rateReviewTitle" class="form-input" 
+                               placeholder="e.g. Exceptional service and exquisite presentation!"
+                               style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px;">
+                    </div>
+
+                    <div style="margin-bottom: 14px;">
+                        <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">
+                            Detailed Feedback & Comments
+                        </label>
+                        <textarea name="review_text" id="rateReviewText" class="form-input" rows="4"
+                                  placeholder="Share how the vendor performed regarding punctuality, quality of deliverables, and communication..."
+                                  style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px;"></textarea>
+                    </div>
+                </div>
+
+                <div class="client-modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" class="btn btn-secondary" onclick="closeRateModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 8px 20px; border-radius: 20px; font-weight: 700;">
+                        <i class="fas fa-paper-plane"></i> Submit Feedback
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -390,7 +531,33 @@ include __DIR__ . '/../includes/navbar.php';
                                 </span>
                             </div>
                             <div style="display: grid; gap: 10px;">
-                                ${services.map(s => `
+                                ${services.map(s => {
+                                    let ratingActionHtml = '';
+                                    if (s.supplier_id) {
+                                        if (s.user_rating) {
+                                            ratingActionHtml = `
+                                                <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: #fffbeb; border: 1px solid #fde68a; padding: 2px 10px; border-radius: 12px;">
+                                                    <span style="color: #b45309; font-size: 11px; font-weight: 800;">
+                                                        <i class="fas fa-star" style="color: #f59e0b;"></i> ${s.user_rating.rating}.0 / 5.0
+                                                    </span>
+                                                    <button type="button" style="background: none; border: none; color: var(--primary); font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 0;"
+                                                            onclick="triggerRateSupplier('${r.BookingID}', ${s.supplier_id}, '${escapeJs(s.business_name || 'Specialist')}', ${s.user_rating.rating}, '${escapeJs(s.user_rating.review_title || '')}', '${escapeJs(s.user_rating.review_text || '')}')">
+                                                        Edit Review
+                                                    </button>
+                                                </div>
+                                            `;
+                                        } else {
+                                            ratingActionHtml = `
+                                                <div style="margin-top: 6px;">
+                                                    <button type="button" style="padding: 3px 10px; border-radius: 12px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                                                            onclick="triggerRateSupplier('${r.BookingID}', ${s.supplier_id}, '${escapeJs(s.business_name || 'Specialist')}', 5, '', '')">
+                                                        <i class="fas fa-star" style="color: #f59e0b;"></i> Rate Supplier
+                                                    </button>
+                                                </div>
+                                            `;
+                                        }
+                                    }
+                                    return `
                                     <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">
                                         <div>
                                             <div style="font-weight: 700; font-size: 13px; color: var(--text-heading);">${s.service_name}</div>
@@ -398,13 +565,15 @@ include __DIR__ . '/../includes/navbar.php';
                                                 <i class="fas fa-store fa-xs" style="color:var(--primary);"></i> <strong>${s.business_name || 'Assigned Specialist'}</strong>
                                                 ${s.listing_title ? ` &bull; <span style="color:#2563eb;">${s.listing_title}</span>` : ''}
                                             </div>
+                                            ${ratingActionHtml}
                                         </div>
                                         <div style="text-align: right;">
                                             <div style="font-size: 12px; font-weight: 600; color: #15803d;"><i class="fas fa-phone-alt fa-xs"></i> ${s.contact_phone || 'Direct coordination'}</div>
                                             <span class="status-pill status-${s.assignment_status || 'confirmed'}" style="font-size: 10px; padding: 2px 8px; margin-top: 3px; display:inline-block;">${(s.assignment_status || 'confirmed').toUpperCase()}</span>
                                         </div>
                                     </div>
-                                `).join('')}
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
                     `;
@@ -554,6 +723,85 @@ include __DIR__ . '/../includes/navbar.php';
             };
             html2pdf().set(opt).from(element).save();
         });
+
+        // Rating & Review Modal Logic
+        const rateModal = document.getElementById('rateSupplierModal');
+        const rateScoreInput = document.getElementById('rateScoreInput');
+        const starScoreLabel = document.getElementById('starScoreLabel');
+        const starItems = document.querySelectorAll('.star-interactive');
+
+        const scoreDescriptions = {
+            1: '1 / 5 - Poor Quality / Unsatisfied',
+            2: '2 / 5 - Fair / Below Expectations',
+            3: '3 / 5 - Good / Standard Delivery',
+            4: '4 / 5 - Great / Highly Recommended',
+            5: '5 / 5 - Exceptional Quality & Execution'
+        };
+
+        function setInteractiveRating(score) {
+            rateScoreInput.value = score;
+            starScoreLabel.innerText = scoreDescriptions[score] || `${score} / 5`;
+            starItems.forEach(star => {
+                const val = parseInt(star.getAttribute('data-val'));
+                if (val <= score) {
+                    star.className = 'fas fa-star star-interactive';
+                    star.style.color = '#f59e0b';
+                } else {
+                    star.className = 'far fa-star star-interactive';
+                    star.style.color = '#cbd5e1';
+                }
+            });
+        }
+
+        starItems.forEach(star => {
+            star.addEventListener('click', () => {
+                const val = parseInt(star.getAttribute('data-val'));
+                setInteractiveRating(val);
+            });
+            star.addEventListener('mouseenter', () => {
+                const val = parseInt(star.getAttribute('data-val'));
+                starItems.forEach(s => {
+                    const sv = parseInt(s.getAttribute('data-val'));
+                    s.style.color = (sv <= val) ? '#f59e0b' : '#cbd5e1';
+                });
+            });
+            star.addEventListener('mouseleave', () => {
+                const current = parseInt(rateScoreInput.value);
+                setInteractiveRating(current);
+            });
+        });
+
+        function triggerRateSupplier(bookingId, supplierId, supplierName, rating = 5, title = '', text = '') {
+            document.getElementById('rateBookingId').value = bookingId;
+            document.getElementById('rateSupplierId').value = supplierId;
+            document.getElementById('rateSupplierSubtitle').innerText = `Reviewing: ${supplierName} (Booking #${bookingId})`;
+            document.getElementById('rateReviewTitle').value = title;
+            document.getElementById('rateReviewText').value = text;
+            setInteractiveRating(parseInt(rating) || 5);
+
+            rateModal.classList.add('show');
+        }
+
+        function closeRateModal() {
+            rateModal.classList.remove('show');
+        }
+
+        function escapeJs(str) {
+            if (!str) return '';
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+        }
+
+        window.addEventListener('click', (e) => {
+            if (e.target === rateModal) closeRateModal();
+        });
+
+        if (window.location.search.includes('reviewed=1')) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed; bottom:25px; right:25px; background:#10b981; color:#fff; padding:14px 22px; border-radius:12px; font-weight:700; box-shadow:0 10px 25px rgba(0,0,0,0.15); z-index:99999; display:flex; align-items:center; gap:10px; font-size:14px;';
+            toast.innerHTML = '<i class="fas fa-check-circle fa-lg"></i> Thank you! Your review has been published.';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4500);
+        }
     </script>
 </body>
 </html>

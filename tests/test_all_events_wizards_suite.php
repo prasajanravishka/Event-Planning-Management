@@ -187,6 +187,7 @@ foreach ($wizards as $name => $path) {
     assert_true(strpos($content, '<label class="form-label" for="place">Venue Name & City</label>') === false, 
         "$name Stage 1 has NO visible Venue Name & City input");
     assert_true(strpos($content, 'stepper-header') !== false, "$name contains Progress Stepper");
+    assert_true(strpos($content, 'stepper-progress-line') !== false, "$name contains stepper-progress-line");
     assert_true(strpos($content, 'compileReviewAndCost') !== false, "$name contains JavaScript Live Budget Calculator");
     assert_true(strpos($content, 'supplier-option-card') !== false, "$name contains Interactive Supplier Selection Cards");
 }
@@ -209,6 +210,36 @@ assert_true(strpos($home_content, 'events/WeddingsSlids.php') !== false, "Home.p
 assert_true(strpos($home_content, 'events/DjPartySlide.php') !== false, "Home.php links to DjPartySlide.php");
 assert_true(strpos($home_content, 'events/BirthdayList.php') !== false, "Home.php links to BirthdayList.php");
 assert_true(strpos($home_content, 'events/GetTogether.php') !== false, "Home.php links to GetTogether.php");
+
+// 6. Mandatory Buyer Authentication & Safe Redirect Checks Across All Wizards
+$login_content = file_get_contents($rootDir . '/public/Login.php');
+assert_true(strpos($login_content, "\$_SESSION['user_id'] = (int)\$row['id'];") !== false, "Login.php stores user_id in session");
+assert_true(strpos($login_content, 'name="redirect"') !== false, "Login.php form contains hidden redirect input");
+assert_true(strpos($login_content, 'header("location: " . $redirect);') !== false, "Login.php redirects to safe target");
+
+assert_true(strpos($booking_content, 'header("Location: Login.php?redirect="') !== false, "Booking.php redirects unauthenticated users to Login.php with redirect parameter");
+
+$mybookings_content = file_get_contents($rootDir . '/public/MyBookings.php');
+assert_true(strpos($mybookings_content, 'b.user_id = ?') !== false, "MyBookings.php queries by user_id and user_name");
+
+foreach ($wizards as $name => $path) {
+    $content = file_get_contents($path);
+    assert_true(strpos($content, 'name="guest_username"') === false, 
+        "$name has completely REMOVED guest_username input field");
+    assert_true(strpos($content, 'Quick Guest Booking') === false, 
+        "$name has completely REMOVED Quick Guest Booking box");
+    assert_true(strpos($content, 'header("Location: ../Login.php?redirect="') !== false, 
+        "$name enforces unauthenticated redirect to Login.php with redirect parameter");
+    assert_true(strpos($content, 'auth-account-badge') !== false, 
+        "$name displays Authenticated Buyer Account badge in Stage 4");
+    assert_true(strpos($content, "\$customer_username = \$logged_user;") !== false, 
+        "$name strictly sets customer username to authenticated buyer session");
+    
+    $navPos = strpos($content, 'navbar.php');
+    $hdrPos = strpos($content, 'header("Location: ../Login.php?redirect=');
+    assert_true($navPos !== false && $hdrPos !== false && $hdrPos < $navPos,
+        "$name performs header redirect BEFORE navbar.php include (prevents 'headers already sent')");
+}
 
 echo "\n=======================================================================\n";
 echo "Summary: $passed Passed, $failed Failed\n";

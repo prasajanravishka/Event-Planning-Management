@@ -5,6 +5,17 @@ if (session_status() === PHP_SESSION_NONE) {
 include_once __DIR__ . '/../../config/database.php';
 include __DIR__ . '/../../includes/navbar.php';
 
+// Auth State & Booking Redirect Helper
+$is_logged_in = isset($_SESSION['login_user']);
+if (!function_exists('get_booking_url')) {
+    function get_booking_url($relative_target, $is_logged_in) {
+        if ($is_logged_in) {
+            return $relative_target;
+        }
+        return '../Login.php?redirect=' . urlencode('events/' . $relative_target);
+    }
+}
+
 // 1. Fetch Birthday Services from Database (event_type_id = 3)
 $birthday_services = [];
 if (isset($conn) && !$conn->connect_error) {
@@ -438,10 +449,26 @@ $previous_birthdays = [
 
         .showcase-footer {
             border-top: 1px solid var(--card-border);
-            padding-top: 16px;
+            padding-top: 14px;
             display: flex;
-            justify-content: space-between;
+            gap: 10px;
             align-items: center;
+        }
+
+        .showcase-footer .btn {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            white-space: nowrap;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1.3;
+        }
+
+        .showcase-footer .btn i {
+            font-size: 12px;
         }
 
         /* Dossier Modal */
@@ -775,7 +802,7 @@ $previous_birthdays = [
                     Whether it is a child’s magical first adventure, an elegant sweet sixteen, or a golden 60th diamond jubilee, EVENTFLARE unites bespoke decorators, award-winning bakeries, interactive magicians, and finger-food feasts.
                 </p>
                 <div class="hero-cta-group">
-                    <a href="BirthdayBooking.php" class="btn btn-primary" style="background:#db2777; border-color:#db2777;">
+                    <a href="<?= get_booking_url('BirthdayBooking.php', $is_logged_in) ?>" class="btn btn-primary" style="background:#db2777; border-color:#db2777;">
                         <i class="fas fa-gift"></i> Plan Birthday Now
                     </a>
                     <a href="#showcase" class="btn btn-secondary">
@@ -859,7 +886,7 @@ $previous_birthdays = [
                                         onclick="openBirthdayDossier(<?= htmlspecialchars(json_encode($b)) ?>)">
                                     <i class="fas fa-eye"></i> Inspect Setup
                                 </button>
-                                <a href="BirthdayBooking.php?theme=<?= urlencode($b['category']) ?>&guests=<?= $b['guests'] ?>" class="btn btn-primary btn-sm" style="background:#db2777; border-color:#db2777;">
+                                <a href="<?= get_booking_url('BirthdayBooking.php?theme=' . urlencode($b['category']) . '&guests=' . $b['guests'], $is_logged_in) ?>" class="btn btn-primary btn-sm" style="background:#db2777; border-color:#db2777;">
                                     Book Similar <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>
@@ -901,7 +928,7 @@ $previous_birthdays = [
                                 </span>
                             </div>
                             <p class="pkg-desc"><?= htmlspecialchars($pkg['description']) ?></p>
-                            <a href="BirthdayBooking.php?package_id=<?= $pkg['listing_id'] ?>" class="btn btn-primary btn-sm" style="width:100%; text-align:center; background:#db2777; border-color:#db2777;">
+                            <a href="<?= get_booking_url('BirthdayBooking.php?package_id=' . $pkg['listing_id'], $is_logged_in) ?>" class="btn btn-primary btn-sm" style="width:100%; text-align:center; background:#db2777; border-color:#db2777;">
                                 <i class="fas fa-check-circle"></i> Book With Package
                             </a>
                         </div>
@@ -1011,7 +1038,7 @@ $previous_birthdays = [
             <h2>Make Their Birthday Extraordinary</h2>
             <p>Step into our specialized 4-stage Birthday Booking Wizard to choose your celebration theme, artisan cake designer, entertainer, and catering.</p>
             <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
-                <a href="BirthdayBooking.php" class="btn btn-primary" style="padding:16px 36px; font-size:16px; background:#db2777; border-color:#db2777;">
+                <a href="<?= get_booking_url('BirthdayBooking.php', $is_logged_in) ?>" class="btn btn-primary" style="padding:16px 36px; font-size:16px; background:#db2777; border-color:#db2777;">
                     <i class="fas fa-gift"></i> Start Birthday Wizard
                 </a>
                 <a href="../ChooseEvent.php" class="btn btn-secondary" style="padding:16px 30px; font-size:16px;">
@@ -1085,7 +1112,9 @@ $previous_birthdays = [
                 sList.appendChild(item);
             }
 
-            document.getElementById('modalBookBtn').href = `BirthdayBooking.php?theme=${encodeURIComponent(bdy.category)}&guests=${bdy.guests}`;
+            const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
+            const targetWizard = `BirthdayBooking.php?theme=${encodeURIComponent(bdy.category)}&guests=${bdy.guests}`;
+            document.getElementById('modalBookBtn').href = isLoggedIn ? targetWizard : `../Login.php?redirect=${encodeURIComponent('events/' + targetWizard)}`;
 
             document.getElementById('birthdayDossierModal').classList.add('active');
             document.body.style.overflow = 'hidden';

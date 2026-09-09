@@ -5,6 +5,17 @@ if (session_status() === PHP_SESSION_NONE) {
 include_once __DIR__ . '/../../config/database.php';
 include __DIR__ . '/../../includes/navbar.php';
 
+// Auth State & Booking Redirect Helper
+$is_logged_in = isset($_SESSION['login_user']);
+if (!function_exists('get_booking_url')) {
+    function get_booking_url($relative_target, $is_logged_in) {
+        if ($is_logged_in) {
+            return $relative_target;
+        }
+        return '../Login.php?redirect=' . urlencode('events/' . $relative_target);
+    }
+}
+
 // 1. Fetch DJ & Party Services from Database (event_type_id = 4)
 $party_services = [];
 if (isset($conn) && !$conn->connect_error) {
@@ -440,10 +451,26 @@ $previous_parties = [
 
         .showcase-footer {
             border-top: 1px solid var(--card-border);
-            padding-top: 16px;
+            padding-top: 14px;
             display: flex;
-            justify-content: space-between;
+            gap: 10px;
             align-items: center;
+        }
+
+        .showcase-footer .btn {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            white-space: nowrap;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1.3;
+        }
+
+        .showcase-footer .btn i {
+            font-size: 12px;
         }
 
         /* Dossier Modal */
@@ -777,7 +804,7 @@ $previous_parties = [
                     From rooftop EDM raves and beach sundowners to arena corporate galas, EVENTFLARE connects you with accredited sound engineers, headline DJs, mobile cocktail bars, and intelligent lighting rigs.
                 </p>
                 <div class="hero-cta-group">
-                    <a href="PartyBooking.php" class="btn btn-primary">
+                    <a href="<?= get_booking_url('PartyBooking.php', $is_logged_in) ?>" class="btn btn-primary">
                         <i class="fas fa-play"></i> Book Party Now
                     </a>
                     <a href="#showcase" class="btn btn-secondary">
@@ -861,7 +888,7 @@ $previous_parties = [
                                         onclick="openPartyDossier(<?= htmlspecialchars(json_encode($p)) ?>)">
                                     <i class="fas fa-eye"></i> Inspect Setup
                                 </button>
-                                <a href="PartyBooking.php?vibe=<?= urlencode($p['category']) ?>&guests=<?= $p['guests'] ?>" class="btn btn-primary btn-sm">
+                                <a href="<?= get_booking_url('PartyBooking.php?vibe=' . urlencode($p['category']) . '&guests=' . $p['guests'], $is_logged_in) ?>" class="btn btn-primary btn-sm">
                                     Book Similar <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>
@@ -903,7 +930,7 @@ $previous_parties = [
                                 </span>
                             </div>
                             <p class="pkg-desc"><?= htmlspecialchars($pkg['description']) ?></p>
-                            <a href="PartyBooking.php?package_id=<?= $pkg['listing_id'] ?>" class="btn btn-primary btn-sm" style="width:100%; text-align:center;">
+                            <a href="<?= get_booking_url('PartyBooking.php?package_id=' . $pkg['listing_id'], $is_logged_in) ?>" class="btn btn-primary btn-sm" style="width:100%; text-align:center;">
                                 <i class="fas fa-check-circle"></i> Book With Package
                             </a>
                         </div>
@@ -1014,7 +1041,7 @@ $previous_parties = [
             <h2>Ready to Host an Epic Party?</h2>
             <p>Step into our specialized 4-stage DJ & Party Booking Wizard to select your sound rig, handpick your DJ, calculate your live budget, and lock in your date.</p>
             <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
-                <a href="PartyBooking.php" class="btn btn-primary" style="padding:16px 36px; font-size:16px;">
+                <a href="<?= get_booking_url('PartyBooking.php', $is_logged_in) ?>" class="btn btn-primary" style="padding:16px 36px; font-size:16px;">
                     <i class="fas fa-bolt"></i> Start Party Booking Wizard
                 </a>
                 <a href="../ChooseEvent.php" class="btn btn-secondary" style="padding:16px 30px; font-size:16px;">
@@ -1092,7 +1119,9 @@ $previous_parties = [
             }
 
             // Link to Booking Wizard
-            document.getElementById('modalBookBtn').href = `PartyBooking.php?vibe=${encodeURIComponent(party.category)}&guests=${party.guests}`;
+            const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
+            const targetWizard = `PartyBooking.php?vibe=${encodeURIComponent(party.category)}&guests=${party.guests}`;
+            document.getElementById('modalBookBtn').href = isLoggedIn ? targetWizard : `../Login.php?redirect=${encodeURIComponent('events/' + targetWizard)}`;
 
             document.getElementById('partyDossierModal').classList.add('active');
             document.body.style.overflow = 'hidden';

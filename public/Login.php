@@ -25,6 +25,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
             $row = $result->fetch_assoc();
             if (password_verify($password, $row['password'])) {
                 $_SESSION['login_user'] = $username;
+                $_SESSION['user_id'] = (int)$row['id'];
                 $_SESSION['user_role'] = $row['role'] ?? 'buyer';
                 
                 if ($username === 'admin' || ($_SESSION['user_role'] ?? '') === 'admin') {
@@ -34,7 +35,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['username']) && isset($
                 } elseif ($_SESSION['user_role'] === 'supplier') {
                     header("location: supplier/Dashboard.php");
                 } else {
-                    header("location: Slide.php"); 
+                    $redirect = trim($_REQUEST['redirect'] ?? '');
+                    // Safe relative redirect check (prevent open redirects)
+                    if (!empty($redirect) && !preg_match('#^(https?:)?//#i', $redirect) && !preg_match('#^/\\\#', $redirect)) {
+                        header("location: " . $redirect);
+                    } else {
+                        header("location: Slide.php"); 
+                    }
                 }
                 exit();
             } else {
@@ -341,6 +348,15 @@ include __DIR__ . '/../includes/navbar.php';
             <div class="auth-card">
                 <form action="Login.php" method="POST">
                     <h1>Sign In</h1>
+                    
+                    <input type="hidden" name="redirect" value="<?= htmlspecialchars($_REQUEST['redirect'] ?? '') ?>">
+                    
+                    <?php if (!empty($_REQUEST['redirect'])): ?>
+                        <div style="background:rgba(139, 92, 246, 0.1); border:1px solid rgba(139, 92, 246, 0.25); border-radius:10px; padding:12px 14px; margin-bottom:20px; font-size:13px; color:var(--primary-dark); display:flex; align-items:center; gap:10px;">
+                            <i class='bx bx-user-check' style="font-size:20px; color:var(--primary);"></i>
+                            <span>Please sign in to your buyer account to complete and manage your event booking.</span>
+                        </div>
+                    <?php endif; ?>
                     
                     <!-- Display error message -->
                     <?php if (!empty($error)): ?>

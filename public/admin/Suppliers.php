@@ -215,6 +215,25 @@ if ($sb_res) {
     }
 }
 
+// Preload supplier ratings
+$supplier_ratings_map = [];
+$sr_res = $conn->query("
+    SELECT supplier_id, 
+           COUNT(*) as review_count, 
+           AVG(rating) as avg_rating
+    FROM ratings 
+    WHERE admin_status = 'approved' 
+    GROUP BY supplier_id
+");
+if ($sr_res) {
+    while ($r = $sr_res->fetch_assoc()) {
+        $supplier_ratings_map[$r['supplier_id']] = [
+            'count' => (int)$r['review_count'],
+            'avg' => round((float)$r['avg_rating'], 1)
+        ];
+    }
+}
+
 // Fetch suppliers
 $sql = "SELECT s.id, s.business_name, s.category, s.contact_phone, s.location, s.description, s.created_at,
                u.id AS user_id, u.username, u.fullname, u.email,
@@ -239,6 +258,7 @@ while ($row = $suppliers_res->fetch_assoc()) {
     $row['services'] = $supplier_services_map[$sid] ?? [];
     $row['listings'] = $supplier_listings_map[$sid] ?? [];
     $row['bookings'] = $supplier_bookings_map[$sid] ?? [];
+    $row['rating_info'] = $supplier_ratings_map[$sid] ?? ['count' => 0, 'avg' => 0.0];
     $suppliers[] = $row;
 }
 $stmt->close();
@@ -361,7 +381,18 @@ if ($cust_count_res) {
                                                 <i class="fas fa-external-link-alt" style="color: var(--primary); font-size: 11px;"></i>
                                             </a>
                                         </div>
-                                        <small style="color: var(--text-muted);">Joined <?= date('M j, Y', strtotime($s['created_at'])); ?></small>
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px;">
+                                            <small style="color: var(--text-muted);">Joined <?= date('M j, Y', strtotime($s['created_at'])); ?></small>
+                                            <?php if (!empty($s['rating_info']['count'])): ?>
+                                                <a href="Ratings.php?supplier_id=<?= $s['id']; ?>" 
+                                                   style="display: inline-flex; align-items: center; gap: 3px; background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; border-radius: 12px; font-size: 11px; font-weight: 800; padding: 1px 7px; text-decoration: none;"
+                                                   title="<?= $s['rating_info']['count']; ?> verified customer reviews (click to inspect in Ratings Console)">
+                                                    <i class="fas fa-star" style="color: #f59e0b; font-size: 10px;"></i>
+                                                    <?= number_format($s['rating_info']['avg'], 1); ?>
+                                                    <span style="color: #92400e; font-weight: 500;">(<?= $s['rating_info']['count']; ?>)</span>
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td>
                                         <div><?= htmlspecialchars($s['fullname']); ?></div>
@@ -586,6 +617,9 @@ if ($cust_count_res) {
                     <i class="fas fa-print"></i> Print Supplier Dossier
                 </button>
                 <div style="display: flex; gap: 10px; align-items: center;">
+                    <a href="#" id="vViewReviewsBtn" class="btn btn-outline btn-sm" style="color: #b45309; border-color: #fde68a; background: #fffbeb;">
+                        <i class="fas fa-star" style="color:#f59e0b;"></i> Customer Reviews
+                    </a>
                     <a href="#" id="vManageListingsBtn" class="btn btn-outline btn-sm">
                         <i class="fas fa-boxes"></i> Manage Listings
                     </a>
@@ -648,6 +682,7 @@ if ($cust_count_res) {
 
             // Update footer links
             document.getElementById('vManageListingsBtn').href = `SupplierListings.php?supplier_id=${s.id}`;
+            document.getElementById('vViewReviewsBtn').href = `Ratings.php?supplier_id=${s.id}`;
             document.getElementById('vEditProfileBtn').onclick = () => {
                 closeModal('viewSupplierModal');
                 openEditModal(s);
@@ -793,6 +828,13 @@ if ($cust_count_res) {
                     <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 12px; text-align: center;">
                         <small style="color: #6b21a8; font-size: 11px; font-weight: 700; text-transform: uppercase; display: block;">TOTAL ALLOCATIONS</small>
                         <div style="font-size: 16px; font-weight: 800; color: var(--primary); margin-top: 6px;">LKR ${Number(totalRevenue).toLocaleString()}</div>
+                    </div>
+                    <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 12px; text-align: center;">
+                        <small style="color: #92400e; font-size: 11px; font-weight: 700; text-transform: uppercase; display: block;">CUSTOMER RATING</small>
+                        <div style="font-size: 18px; font-weight: 800; color: #b45309; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            <i class="fas fa-star" style="color: #f59e0b;"></i>
+                            ${s.rating_info && s.rating_info.count > 0 ? `${Number(s.rating_info.avg).toFixed(1)} <small style="font-size:12px; font-weight:600; color:#92400e;">(${s.rating_info.count})</small>` : '<span style="font-size:12px; font-weight:600; color:#94a3b8;">No reviews</span>'}
+                        </div>
                     </div>
                 </div>
 

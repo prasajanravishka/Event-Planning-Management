@@ -1,7 +1,9 @@
 <?php
 session_start();
 if (!isset($_SESSION['login_user'])) {
-    header("Location: Login.php");
+    $current_uri = $_SERVER['REQUEST_URI'] ?? '';
+    $redirect_target = !empty($current_uri) ? $current_uri : 'Booking.php';
+    header("Location: Login.php?redirect=" . urlencode($redirect_target));
     exit();
 }
 include __DIR__ . '/../config/database.php';

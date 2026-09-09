@@ -2,15 +2,22 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// Enforce mandatory buyer authentication
+if (!isset($_SESSION['login_user'])) {
+    $current_uri = $_SERVER['REQUEST_URI'] ?? '';
+    $redirect_target = !empty($current_uri) ? $current_uri : 'events/BirthdayBooking.php';
+    header("Location: ../Login.php?redirect=" . urlencode($redirect_target));
+    exit();
+}
+
 include_once __DIR__ . '/../../config/database.php';
 include __DIR__ . '/../../includes/navbar.php';
 
-// Auth State
-$is_logged_in = isset($_SESSION['user']) || isset($_SESSION['user_name']) || isset($_SESSION['username']);
-$logged_user = $_SESSION['user'] ?? $_SESSION['user_name'] ?? $_SESSION['username'] ?? '';
+// Authenticated buyer details
+$logged_user = $_SESSION['login_user'];
 $logged_user_id = $_SESSION['user_id'] ?? null;
 
-if ($is_logged_in && empty($logged_user_id) && isset($conn)) {
+if (empty($logged_user_id) && isset($conn)) {
     $u_stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
     if ($u_stmt) {
         $u_stmt->bind_param("s", $logged_user);
@@ -18,6 +25,7 @@ if ($is_logged_in && empty($logged_user_id) && isset($conn)) {
         $u_res = $u_stmt->get_result();
         if ($u_row = $u_res->fetch_assoc()) {
             $logged_user_id = (int)$u_row['id'];
+            $_SESSION['user_id'] = $logged_user_id;
         }
         $u_stmt->close();
     }
@@ -52,14 +60,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
     $extra_details  = trim($_POST['extra_details'] ?? '');
     $selected_pkgs  = $_POST['selected_packages'] ?? []; // format: [service_id => listing_id]
 
-    // Determine customer username
+    // Customer username strictly bound to authenticated buyer
     $customer_username = $logged_user;
-    if (empty($customer_username)) {
-        $customer_username = trim($_POST['guest_username'] ?? '');
-        if (empty($customer_username)) {
-            $customer_username = !empty($contact_email) ? explode('@', $contact_email)[0] : 'birthday_host';
-        }
-    }
 
     if (empty($event_date) || $guest_count <= 0) {
         $error_message = "Please complete all required fields (Celebration Date and Expected Guests).";
@@ -200,13 +202,13 @@ if (!empty($birthday_services) && isset($conn)) {
             padding: 0 20px;
         }
 
-        .stepper-progress-track {
+        .stepper-progress-line {
             position: absolute;
             top: 24px;
             left: 50px;
             right: 50px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.08);
+            height: 3px;
+            background: rgba(236, 72, 153, 0.15);
             z-index: 1;
         }
 
@@ -600,7 +602,7 @@ if (!empty($birthday_services) && isset($conn)) {
         <?php else: ?>
             <!-- ================= STEPPER HEADER ================= -->
             <div class="stepper-header">
-                <div class="stepper-progress-track">
+                <div class="stepper-progress-line">
                     <div class="stepper-progress-bar" id="stepperProgressBar"></div>
                 </div>
 
@@ -873,18 +875,25 @@ if (!empty($birthday_services) && isset($conn)) {
                                               placeholder="Wording on birthday cake, dietary restrictions (nut-free, eggless), favorite songs, game preferences..."></textarea>
                                 </div>
 
-                                <?php if (!$is_logged_in): ?>
-                                    <div style="background:rgba(236, 72, 153, 0.08); border:1px solid rgba(236, 72, 153, 0.2); border-radius:14px; padding:18px; margin-top:20px;">
-                                        <h5 style="color:#db2777; font-weight:800; margin-bottom:6px;"><i class="fas fa-user-lock"></i> Quick Guest Booking</h5>
-                                        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">
-                                            You are booking as a guest. Enter a username to manage this booking, or sign in to link with your account.
-                                        </p>
-                                        <div class="form-group" style="margin-bottom:0;">
-                                            <label class="form-label" for="guest_username">Preferred Username</label>
-                                            <input type="text" class="form-input" id="guest_username" name="guest_username" placeholder="e.g. nilushi_bday">
+                                <div class="auth-account-badge" style="background:rgba(236, 72, 153, 0.08); border:1px solid rgba(236, 72, 153, 0.25); border-radius:14px; padding:16px 20px; margin-top:20px; display:flex; align-items:center; gap:14px;">
+                                    <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg, #ec4899, #f43f5e); display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; flex-shrink:0;">
+                                        <i class="fas fa-user-check"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--text-muted);">
+                                            Booking Account
+                                        </div>
+                                        <div style="font-size:15px; font-weight:800; color:var(--text-heading);">
+                                            <?= htmlspecialchars($logged_user) ?>
+                                            <span style="font-size:12px; font-weight:600; color:#db2777; margin-left:8px; background:rgba(236, 72, 153, 0.12); padding:2px 8px; border-radius:6px;">
+                                                <i class="fas fa-check-circle"></i> Authenticated Buyer
+                                            </span>
+                                        </div>
+                                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                                            This birthday booking will be automatically linked to your account and managed via <a href="../MyBookings.php" style="color:#db2777; font-weight:600; text-decoration:underline;">My Bookings</a>.
                                         </div>
                                     </div>
-                                <?php endif; ?>
+                                </div>
                             </div>
 
                             <div>

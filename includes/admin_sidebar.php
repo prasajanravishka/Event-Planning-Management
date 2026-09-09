@@ -14,6 +14,7 @@ $badge_pending_bookings = 0;
 $badge_unread_messages = 0;
 $badge_customers = 0;
 $badge_suppliers = 0;
+$badge_pending_reviews = 0;
 
 if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
     $b_res = $conn->query("SELECT COUNT(*) as c FROM bookings WHERE status = 'pending'");
@@ -32,7 +33,12 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
     if ($s_res) {
         $badge_suppliers = (int)$s_res->fetch_assoc()['c'];
     }
+    $r_res = $conn->query("SELECT COUNT(*) as c FROM ratings WHERE admin_status = 'pending' OR admin_status = 'hidden'");
+    if ($r_res) {
+        $badge_pending_reviews = (int)$r_res->fetch_assoc()['c'];
+    }
 }
+$badge_total_clients = $badge_customers + $badge_suppliers;
 
 // Current logged-in user display info
 $current_admin_user = $_SESSION['login_user'] ?? 'Admin';
@@ -78,18 +84,18 @@ $admin_initial = strtoupper(substr($current_admin_user, 0, 1));
 
         <li class="sidebar-section-header">People & Accounts</li>
         <li>
-            <a href="Userlist.php" <?= ($active_page === 'users') ? 'class="active"' : '' ?>>
-                <i class="fas fa-user-friends"></i> Customers
-                <?php if ($badge_customers > 0): ?>
-                    <span class="sidebar-badge badge-neutral"><?= $badge_customers ?></span>
+            <a href="Userlist.php" <?= ($active_page === 'users' || $active_page === 'suppliers') ? 'class="active"' : '' ?>>
+                <i class="fas fa-users"></i> Clients
+                <?php if ($badge_total_clients > 0): ?>
+                    <span class="sidebar-badge badge-neutral"><?= $badge_total_clients ?></span>
                 <?php endif; ?>
             </a>
         </li>
         <li>
-            <a href="Suppliers.php" <?= ($active_page === 'suppliers') ? 'class="active"' : '' ?>>
-                <i class="fas fa-store"></i> Suppliers
-                <?php if ($badge_suppliers > 0): ?>
-                    <span class="sidebar-badge badge-neutral"><?= $badge_suppliers ?></span>
+            <a href="Ratings.php" <?= ($active_page === 'ratings') ? 'class="active"' : '' ?>>
+                <i class="fas fa-star"></i> Ratings & Reviews
+                <?php if ($badge_pending_reviews > 0): ?>
+                    <span class="sidebar-badge badge-warning"><?= $badge_pending_reviews ?></span>
                 <?php endif; ?>
             </a>
         </li>
